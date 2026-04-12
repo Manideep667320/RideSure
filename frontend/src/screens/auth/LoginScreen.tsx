@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, KeyboardAvoidingView, Platform, ScrollView, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import auth, { FirebaseAuthTypes } from '@react-native-firebase/auth'; // <--- NATIVE DEPENDENCY
@@ -11,6 +11,7 @@ import { GradientButton } from '../../components/ui/GradientButton';
 import { ROUTES } from '../../constants/routes';
 import { useAuth } from '../../context/AuthContext';
 import api from '../../services/api';
+import { configureGoogleSignIn, signInWithGoogle } from '../../services/googleSignInService';
 
 const LoginScreen = ({ navigation }: any) => {
   const [phone, setPhone] = useState('');
@@ -18,7 +19,13 @@ const LoginScreen = ({ navigation }: any) => {
   // We use the Native FirebaseAuthTypes confirmation result now! 
   const [confirm, setConfirm] = useState<FirebaseAuthTypes.ConfirmationResult | null>(null);
   const [loading, setLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
   const { login } = useAuth();
+  
+  // Initialize Google Sign-In on component mount
+  useEffect(() => {
+    configureGoogleSignIn();
+  }, []);
   
   // Notice we completely dropped the Web SDK `RecaptchaVerifier`!
 
@@ -70,6 +77,33 @@ const LoginScreen = ({ navigation }: any) => {
     }
   };
 
+  const handleGoogleSignIn = async () => {
+    try {
+      setGoogleLoading(true);
+      const result = await signInWithGoogle();
+      
+      if (result && result.token) {
+        // Pass token to Backend to get Mongo Data
+        await login(result.token);
+        
+        const freshUserResponse = await api.get<any>('/auth/me');
+        
+        if (!freshUserResponse.data.data.name) {
+          navigation.replace('SignUpDetails');
+        } else {
+          navigation.reset({
+            index: 0,
+            routes: [{ name: ROUTES.MAIN.HOME }],
+          });
+        }
+      }
+    } catch (err: any) {
+      alert(`Google Sign-In Error: ${err.message}`);
+    } finally {
+      setGoogleLoading(false);
+    }
+  };
+
   return (
     <SafeAreaView style={styles.safeArea}>
       <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
@@ -104,6 +138,25 @@ const LoginScreen = ({ navigation }: any) => {
                   onPress={sendVerification} 
                   style={{ marginTop: 8 }}
                 />
+
+                {/* Divider */}
+                <View style={styles.dividerContainer}>
+                  <View style={styles.dividerLine} />
+                  <Text style={styles.dividerText}>Or</Text>
+                  <View style={styles.dividerLine} />
+                </View>
+
+                {/* Google Sign-In Button */}
+                <TouchableOpacity 
+                  style={styles.googleButton}
+                  onPress={handleGoogleSignIn}
+                  disabled={googleLoading}
+                >
+                  <Ionicons name="logo-google" size={20} color={colors.primary} />
+                  <Text style={styles.googleButtonText}>
+                    {googleLoading ? "Signing in..." : "Sign in with Google"}
+                  </Text>
+                </TouchableOpacity>
               </>
             ) : (
                <>
@@ -143,6 +196,40 @@ const styles = StyleSheet.create({
   formSection: { backgroundColor: colors.surfaceContainerLowest, padding: spacing.xl, borderRadius: borderRadius['2xl'], shadowColor: colors.primary, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.05, shadowRadius: 16, elevation: 2, marginBottom: spacing.xl },
   welcomeTitle: { fontFamily: typography.fontFamily.headlineBold, fontSize: typography.fontSize.headlineMd, color: colors.onSurface, marginBottom: 16 },
   inputWrapper: { marginBottom: spacing.lg },
+  dividerContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginVertical: spacing.lg,
+    gap: 12,
+  },
+  dividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: colors.outlineVariant,
+  },
+  dividerText: {
+    fontFamily: typography.fontFamily.bodyMedium,
+    fontSize: typography.fontSize.bodyMd,
+    color: colors.onSurfaceVariant,
+  },
+  googleButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.lg,
+    borderRadius: borderRadius.lg,
+    borderWidth: 1,
+    borderColor: colors.outline,
+    backgroundColor: colors.surface,
+    gap: 12,
+  },
+  googleButtonText: {
+    fontFamily: typography.fontFamily.labelLarge,
+    fontSize: typography.fontSize.labelLg,
+    color: colors.primary,
+    fontWeight: '600',
+  },
 });
 
 export default LoginScreen;

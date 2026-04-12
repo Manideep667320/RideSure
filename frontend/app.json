@@ -18,6 +18,7 @@
     "android": {
       "package": "com.ridesure.app",
       "googleServicesFile": "./google-services.json",
+      "ndkVersion": "27.0.12077973",
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#f8f9fa"
