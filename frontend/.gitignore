@@ -1,0 +1,21 @@
+# Expo
+node_modules/
+.expo/
+dist/
+web-build/
+
+# Native folders (managed by prebuild)
+# These are generated and usually not committed in managed-workflow, 
+# but for dev-client/prebuild it's optional. 
+# We ignore them to keep the repo clean and let CI/New devs prebuild.
+/android/
+/ios/
+
+# Firebase configuration (Sensitive)
+google-services.json
+
+# Local configurations
+local.properties
+
+# Logs
+*.log

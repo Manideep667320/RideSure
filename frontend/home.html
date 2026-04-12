@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>InsureGo - Home Dashboard</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@700;800&amp;family=Manrope:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "surface": "#f8f9fa",
+                    "on-secondary-container": "#fffbff",
+                    "tertiary-fixed": "#ffdbc9",
+                    "on-primary-fixed": "#001945",
+                    "primary": "#00347f",
+                    "tertiary-fixed-dim": "#ffb68c",
+                    "secondary-fixed-dim": "#d7baff",
+                    "on-tertiary": "#ffffff",
+                    "on-primary": "#ffffff",
+                    "tertiary-container": "#823a00",
+                    "on-error-container": "#93000a",
+                    "surface-container-low": "#f3f4f5",
+                    "surface-container": "#edeeef",
+                    "outline-variant": "#cdc2d7",
+                    "error": "#ba1a1a",
+                    "on-error": "#ffffff",
+                    "inverse-surface": "#2e3132",
+                    "surface-bright": "#f8f9fa",
+                    "on-primary-container": "#a8c0ff",
+                    "on-secondary-fixed-variant": "#6100be",
+                    "on-secondary": "#ffffff",
+                    "on-tertiary-fixed": "#321200",
+                    "tertiary": "#5f2800",
+                    "inverse-primary": "#b0c6ff",
+                    "inverse-on-surface": "#f0f1f2",
+                    "on-surface": "#191c1d",
+                    "secondary-fixed": "#eddcff",
+                    "surface-tint": "#0058cc",
+                    "primary-container": "#0049ad",
+                    "primary-fixed-dim": "#b0c6ff",
+                    "secondary-container": "#924bf3",
+                    "outline": "#7c7486",
+                    "on-tertiary-fixed-variant": "#753400",
+                    "surface-container-lowest": "#ffffff",
+                    "surface-dim": "#d9dadb",
+                    "secondary": "#782ad9",
+                    "on-surface-variant": "#4b4454",
+                    "background": "#f8f9fa",
+                    "on-background": "#191c1d",
+                    "on-secondary-fixed": "#280056",
+                    "on-primary-fixed-variant": "#00419c",
+                    "on-tertiary-container": "#ffae7f",
+                    "surface-container-highest": "#e1e3e4",
+                    "surface-container-high": "#e7e8e9",
+                    "primary-fixed": "#d9e2ff",
+                    "error-container": "#ffdad6",
+                    "surface-variant": "#e1e3e4"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.25rem",
+                    "lg": "0.5rem",
+                    "xl": "0.75rem",
+                    "2xl": "1.5rem",
+                    "full": "9999px"
+            },
+            "fontFamily": {
+                    "headline": ["Plus Jakarta Sans"],
+                    "body": ["Manrope"],
+                    "label": ["Manrope"]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+            display: inline-block;
+            line-height: 1;
+            text-transform: none;
+            letter-spacing: normal;
+            word-wrap: normal;
+            white-space: nowrap;
+            direction: ltr;
+        }
+        .signature-gradient {
+            background: linear-gradient(135deg, #782ad9 0%, #00347f 100%);
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-surface text-on-surface font-body min-h-screen pb-32">
+<!-- TopAppBar -->
+<header class="w-full sticky top-0 z-50 bg-[#f8f9fa] dark:bg-slate-950 flex items-center justify-between px-6 h-16 w-full">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-[#00347f] dark:text-blue-400">shield_with_heart</span>
+<h1 class="font-['Plus_Jakarta_Sans'] font-bold text-lg text-xl font-bold tracking-tight text-[#00347f] dark:text-blue-400">InsureGo</h1>
+</div>
+<button class="w-10 h-10 rounded-full bg-surface-container-low flex items-center justify-center hover:bg-slate-100 transition-colors active:scale-95 duration-150">
+<span class="material-symbols-outlined text-on-surface-variant">notifications</span>
+</button>
+</header>
+<main class="px-6 max-w-md mx-auto">
+<!-- Greeting Section -->
+<section class="mt-8 mb-6">
+<h2 class="font-headline text-3xl text-on-surface tracking-tight">Hi Ravi 👋</h2>
+<p class="text-on-surface-variant font-medium mt-1">Ready for your next shift?</p>
+</section>
+<!-- Warning Card: Unprotected State -->
+<div class="bg-error-container rounded-2xl p-6 mb-8 relative overflow-hidden">
+<div class="relative z-10 flex flex-col gap-4">
+<div class="flex items-center gap-3">
+<div class="w-12 h-12 rounded-full bg-error flex items-center justify-center">
+<span class="material-symbols-outlined text-on-error" style="font-variation-settings: 'FILL' 1;">warning</span>
+</div>
+<div>
+<p class="text-on-error-container font-headline text-lg leading-tight">You are NOT Protected</p>
+<p class="text-on-error-container/80 text-sm font-medium">Your current activities are not insured.</p>
+</div>
+</div>
+<button class="signature-gradient text-white font-headline py-4 px-8 rounded-2xl flex items-center justify-center gap-2 active:scale-95 transition-transform shadow-lg shadow-primary/20">
+<span>Start Protection</span>
+<span class="material-symbols-outlined">bolt</span>
+</button>
+</div>
+<!-- Decorative light refraction -->
+<div class="absolute -top-12 -right-12 w-32 h-32 bg-error opacity-10 blur-3xl rounded-full"></div>
+</div>
+<!-- Plan Details Bento Grid -->
+<section class="space-y-6">
+<div class="flex items-center justify-between">
+<h3 class="font-headline text-xl text-on-surface">Standard Plan</h3>
+<span class="text-primary font-bold text-sm bg-primary/10 px-3 py-1 rounded-full">Gig-Worker Special</span>
+</div>
+<div class="grid grid-cols-2 gap-4">
+<!-- Daily Cost Card -->
+<div class="bg-surface-container-lowest p-5 rounded-2xl shadow-[0_12px_32px_rgba(25,28,29,0.04)] flex flex-col gap-2">
+<p class="text-on-surface-variant text-xs font-label uppercase tracking-widest">Daily Cost</p>
+<div class="flex items-baseline gap-1">
+<span class="text-primary font-headline text-2xl font-extrabold">₹10</span>
+<span class="text-on-surface-variant text-sm">/day</span>
+</div>
+<div class="mt-2 text-[10px] text-on-surface-variant bg-surface-container-low p-2 rounded-lg leading-snug">
+                        Pay only when you are active.
+                    </div>
+</div>
+<!-- Coverage Card -->
+<div class="bg-surface-container-lowest p-5 rounded-2xl shadow-[0_12px_32px_rgba(25,28,29,0.04)] flex flex-col gap-2 border-l-4 border-secondary">
+<p class="text-on-surface-variant text-xs font-label uppercase tracking-widest">Protection</p>
+<span class="text-on-surface font-headline text-xl leading-tight">₹50,000</span>
+<p class="text-on-surface-variant text-[10px] font-medium leading-tight">accident protection included</p>
+</div>
+</div>
+<!-- Full-width Benefit Card -->
+<div class="bg-surface-container-low rounded-2xl p-6 flex items-center justify-between group">
+<div class="flex-1">
+<p class="font-headline text-on-surface leading-tight">Smart Activation</p>
+<p class="text-on-surface-variant text-sm mt-1 leading-snug">Automatically starts when you begin your trip via connected apps.</p>
+</div>
+<div class="w-16 h-16 rounded-xl bg-surface-container-lowest flex items-center justify-center text-primary ml-4">
+<span class="material-symbols-outlined text-4xl">dynamic_feed</span>
+</div>
+</div>
+</section>
+<!-- Illustration / Background image context -->
+<div class="mt-10 rounded-2xl overflow-hidden h-48 relative">
+<img class="w-full h-full object-cover grayscale opacity-30" data-alt="a busy urban city street with blurred delivery motorcycles and soft golden city lighting at dawn" src="https://lh3.googleusercontent.com/aida-public/AB6AXuC6vSbseN7Mdl9cSYYGWGwpgJ_CzvoY5ZY3eXPDxjSU-A8GiM5IcBF5BGyRWV9UVAgpK6ZNVNkhHeBgaKYbdSk1ps2KglT2F3E9at8q5HmmRLaAl5RHMGHpRPx8455x2LIH7BDYXOLbdkmE8NDggXPmlKLNcs7mBoPzhFGuzxRi9ooCHF6MT0QkO76Dxk63Yaa5BjkmdAbIBLO4JzbK2Hr31FZ_uiVitNkTxAxKjcPO0YQOz__MmdZlk-JBkz2dGjYGcwXfLch0Cw"/>
+<div class="absolute inset-0 bg-gradient-to-t from-surface via-surface/40 to-transparent"></div>
+<div class="absolute bottom-4 left-4 right-4">
+<p class="text-sm font-medium text-on-surface-variant italic text-center">"InsureGo has saved me ₹4,500 in medical bills last month." - Sumit, Delivery Partner</p>
+</div>
+</div>
+</main>
+<!-- BottomNavBar -->
+<nav class="fixed bottom-0 left-0 w-full flex justify-around items-center px-4 py-3 pb-safe bg-[#ffffff]/80 dark:bg-slate-900/80 backdrop-blur-xl border-t border-[#cdc2d7]/15 shadow-[0_-12px_32px_rgba(25,28,29,0.08)] rounded-t-[1.5rem] z-50">
+<button class="flex flex-col items-center justify-center bg-[#f3f4f5] dark:bg-slate-800 text-[#00347f] dark:text-blue-300 rounded-2xl py-2 px-4 active:scale-90 transition-transform">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">home_app_logo</span>
+<span class="font-['Manrope'] font-medium text-[10px]">Home</span>
+</button>
+<button class="flex flex-col items-center justify-center text-slate-500 dark:text-slate-400 py-2 px-4 hover:text-[#6a11cb] dark:hover:text-violet-300 active:scale-90 transition-transform">
+<span class="material-symbols-outlined">assignment_late</span>
+<span class="font-['Manrope'] font-medium text-[10px]">Claims</span>
+</button>
+<button class="flex flex-col items-center justify-center text-slate-500 dark:text-slate-400 py-2 px-4 hover:text-[#6a11cb] dark:hover:text-violet-300 active:scale-90 transition-transform">
+<span class="material-symbols-outlined">history</span>
+<span class="font-['Manrope'] font-medium text-[10px]">History</span>
+</button>
+<button class="flex flex-col items-center justify-center text-slate-500 dark:text-slate-400 py-2 px-4 hover:text-[#6a11cb] dark:hover:text-violet-300 active:scale-90 transition-transform">
+<span class="material-symbols-outlined">person</span>
+<span class="font-['Manrope'] font-medium text-[10px]">Profile</span>
+</button>
+</nav>
+</body></html>

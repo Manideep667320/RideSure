@@ -79,28 +79,39 @@ Because the backend and the frontend operate horizontally, you must launch them 
    *The server defaults to running dynamically on Port `5000`.*
 
 ### 2. Launching the Frontend
+
+> [!IMPORTANT]
+> Because RideSure uses **Native Firebase Modules**, you must use a **Custom Dev Client** rather than the standard Expo Go app.
+
 1. Open a **new** terminal window and navigate into the `frontend` folder:
    ```bash
    cd frontend
    ```
-2. Install SDK 54 compatible modules allowing resolving dependencies securely:
+2. Install dependencies:
    ```bash
-   npm install
+   npm install --legacy-peer-deps
    ```
-3. Ensure that your native `frontend/src/constants/config.ts` points accurately to your live development IP. Given React Native Expo relies on dynamic Local Area Network mapping instead of `localhost`, verify:
-   ```typescript
-   export const CONFIG = {
-     API_URL: 'http://<YOUR_LAN_IP_ADDRESS>:5000',
-   };
+3. **Download Firebase Configuration**:
+   Place your `google-services.json` file inside the `frontend/` directory.
+4. **Build the Custom Dev Client**:
+   Ensure you have an Android emulator or device connected and run:
+   ```bash
+   npx expo run:android
    ```
-4. Start the frontend through Expo:
+5. **Start the Bundler**:
+   Once the app is installed, you can start the development server:
    ```bash
    npx expo start
    ```
-5. Choose your target target platform by pressing:
-   - `a` to open mapped to your Android Emulator.
-   - `i` to execute onto your iOS Simulator.
-   - Or simply scan the generated QR Code with the **Expo Go** application available natively on any physical mobile device.
+6. The app will open inside your custom **RideSure** developer build. Standard hot-reloading works as expected.
+
+---
+
+## 🔑 Native Firebase Setup
+To ensure Phone Auth works correctly on Android:
+1. Generate your **SHA-1** fingerprint from your local debug keystore.
+2. Add the SHA-1 to your Firebase project under **Project Settings > Android App**.
+3. Ensure **Phone Authentication** is enabled in the Firebase Auth console.
 
 ---
 
