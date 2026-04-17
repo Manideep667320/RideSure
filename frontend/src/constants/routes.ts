@@ -15,5 +15,10 @@ export const ROUTES = {
     CLAIM_SUCCESS: 'ClaimSuccess',
     HISTORY: 'History',
     PROFILE: 'Profile',
+    PERSONAL_INFO: 'PersonalInfo',
+    PAYMENT_METHODS: 'PaymentMethods',
+    INSURANCE_DOCUMENTS: 'InsuranceDocuments',
+    HELP_CENTER: 'HelpCenter',
+    TERMS_POLICY: 'TermsPolicy',
   },
 };

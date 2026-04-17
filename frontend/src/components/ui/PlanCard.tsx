@@ -103,7 +103,11 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surfaceContainerLowest,
     borderRadius: borderRadius['2xl'],
     padding: spacing.cardPadding,
-    ...shadows.sm,
+    shadowColor: '#191c1d',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.04,
+    shadowRadius: 12,
+    elevation: 2,
   },
   selectedCard: {
     borderWidth: 2,

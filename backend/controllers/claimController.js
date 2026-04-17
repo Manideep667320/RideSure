@@ -1,4 +1,4 @@
-const { submitClaim, getClaimDetails } = require('../services/claimService');
+const { submitClaim, getClaimDetails, getUserClaims } = require('../services/claimService');
 const { validateClaimInput } = require('../utils/validators');
 
 const submitClaimController = async (req, res, next) => {
@@ -27,7 +27,17 @@ const getClaimController = async (req, res, next) => {
     }
 };
 
+const getUserClaimsController = async (req, res, next) => {
+    try {
+        const claims = await getUserClaims(req.user.id);
+        res.status(200).json({ success: true, data: claims });
+    } catch (error) {
+        next(error);
+    }
+};
+
 module.exports = {
     submitClaimController,
-    getClaimController
+    getClaimController,
+    getUserClaimsController
 };

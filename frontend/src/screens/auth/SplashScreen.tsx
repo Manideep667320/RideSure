@@ -6,6 +6,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../../theme/colors';
 import { spacing, borderRadius } from '../../theme/spacing';
 import { typography } from '../../theme/typography';
+import { gradients } from '../../theme/gradients';
 import { Card } from '../../components/common/Card';
 import { GradientButton } from '../../components/ui/GradientButton';
 
@@ -53,9 +54,6 @@ const SplashScreen = ({ navigation }: any) => {
     </SafeAreaView>
   );
 };
-
-// Let's import gradients correctly
-import { gradients } from '../../theme/gradients';
 
 const styles = StyleSheet.create({
   safeArea: {

@@ -195,7 +195,11 @@ const styles = StyleSheet.create({
     borderRadius: 44,
     alignItems: 'center',
     justifyContent: 'center',
-    ...shadows.primaryTinted,
+    shadowColor: '#00347f',
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.15,
+    shadowRadius: 32,
+    elevation: 6,
   },
   spinnerInner: {
     width: 72,

@@ -11,6 +11,18 @@ import { ROUTES } from '../../constants/routes';
 import { useAuth } from '../../context/AuthContext';
 import api from '../../services/api';
 
+interface User {
+  id: string;
+  firebaseUid: string;
+  phone?: string;
+  name?: string;
+}
+
+interface ApiResponse<T> {
+  success: boolean;
+  data: T;
+}
+
 const SignUpDetailsScreen = ({ navigation }: any) => {
   const [name, setName] = useState('');
   const [loading, setLoading] = useState(false);
@@ -24,13 +36,11 @@ const SignUpDetailsScreen = ({ navigation }: any) => {
     try {
       setLoading(true);
       // Synchronize with our MongoDB backend route we just created using standard secure requests
-      const response = await api.put('/auth/profile', { name });
+      const response = await api.put<ApiResponse<User>>('/auth/profile', { name });
       
-      if (response && response.data && response.data.success) {
+      if (response?.success && response.data) {
          // Update Local Context
-         if (user) {
-            setUser({ ...user, name });
-         }
+         setUser(response.data);
          
          // Navigate Home
          navigation.reset({

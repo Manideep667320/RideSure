@@ -4,7 +4,6 @@ import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../../theme/colors';
 import { spacing, borderRadius } from '../../theme/spacing';
 import { typography } from '../../theme/typography';
-import { shadows } from '../../theme/shadows';
 import { StatusBadge } from './StatusBadge';
 
 interface HistoryCardProps {
@@ -75,7 +74,11 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surfaceContainerLowest,
     borderRadius: borderRadius['2xl'],
     padding: spacing.cardPadding,
-    ...shadows.sm,
+    shadowColor: '#191c1d',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.04,
+    shadowRadius: 12,
+    elevation: 2,
   },
   topRow: {
     flexDirection: 'row',

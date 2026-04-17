@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
@@ -10,11 +10,20 @@ import { gradients } from '../../theme/gradients';
 import { shadows } from '../../theme/shadows';
 import { Card } from '../../components/common/Card';
 import { GradientButton } from '../../components/ui/GradientButton';
+import { policyService } from '../../services/policyService';
 
 type UPIOption = 'gpay' | 'phonepe' | 'paytm' | 'bhim';
 
-const PaymentScreen = ({ navigation }: any) => {
+const PaymentScreen = ({ navigation, route }: any) => {
   const [selectedUPI, setSelectedUPI] = useState<UPIOption>('gpay');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const planType = route?.params?.planType || 'weekly';
+  const planDetails: Record<string, { amount: string; name: string }> = {
+    daily: { amount: '₹10', name: 'Daily Gig Protection Plan' },
+    weekly: { amount: '₹49', name: 'Weekly Gig Protection Plan' },
+  };
 
   const upiOptions: { id: UPIOption; name: string; icon: string }[] = [
     { id: 'gpay', name: 'Google Pay', icon: 'logo-google' },
@@ -22,6 +31,26 @@ const PaymentScreen = ({ navigation }: any) => {
     { id: 'paytm', name: 'Paytm', icon: 'wallet-outline' },
     { id: 'bhim', name: 'BHIM UPI', icon: 'card-outline' },
   ];
+
+  const handlePayment = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      // Create policy via API
+      const response = await policyService.createPolicy(planType as 'daily' | 'weekly');
+      
+      if (response && response.data) {
+        // Navigate to success screen
+        navigation.replace('ActivationSuccess', { policy: response.data, planType });
+      }
+    } catch (err: any) {
+      setError(err.message || 'Payment failed. Please try again.');
+      console.error('Payment error:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -35,6 +64,7 @@ const PaymentScreen = ({ navigation }: any) => {
           <TouchableOpacity
             onPress={() => navigation.goBack()}
             style={styles.backButton}
+            disabled={loading}
           >
             <Ionicons name="arrow-back" size={24} color={colors.onSurface} />
           </TouchableOpacity>
@@ -51,10 +81,18 @@ const PaymentScreen = ({ navigation }: any) => {
             style={styles.amountGradient}
           >
             <Text style={styles.amountLabel}>Amount to Pay</Text>
-            <Text style={styles.amountValue}>₹10</Text>
-            <Text style={styles.amountPlan}>Daily Gig Protection Plan</Text>
+            <Text style={styles.amountValue}>{planDetails[planType]?.amount}</Text>
+            <Text style={styles.amountPlan}>{planDetails[planType]?.name}</Text>
           </LinearGradient>
         </Card>
+
+        {/* ─── Error Message ──────────────────────────────── */}
+        {error && (
+          <View style={styles.errorContainer}>
+            <Ionicons name="alert-circle" size={20} color={colors.error} />
+            <Text style={styles.errorText}>{error}</Text>
+          </View>
+        )}
 
         {/* ─── UPI Options ─────────────────────────────────── */}
         <Text style={styles.sectionTitle}>UPI Options</Text>
@@ -65,6 +103,7 @@ const PaymentScreen = ({ navigation }: any) => {
               key={option.id}
               onPress={() => setSelectedUPI(option.id)}
               activeOpacity={0.8}
+              disabled={loading}
               style={[
                 styles.upiOption,
                 selectedUPI === option.id && styles.upiOptionSelected,
@@ -105,8 +144,9 @@ const PaymentScreen = ({ navigation }: any) => {
 
         {/* ─── Pay Button ──────────────────────────────────── */}
         <GradientButton
-          title="Pay Now — ₹10"
-          onPress={() => navigation.navigate('ActiveProtection')}
+          title={loading ? 'Processing...' : `Pay Now — ${planDetails[planType]?.amount}`}
+          onPress={handlePayment}
+          disabled={loading}
           size="lg"
           style={{ marginTop: spacing['2xl'] }}
         />
@@ -154,7 +194,7 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontFamily: typography.fontFamily.headlineBold,
-    fontSize: typography.fontSize.titleLg,
+    fontSize: typography.fontSize.titleMd,
     fontWeight: '700',
     color: colors.onSurface,
   },
@@ -162,82 +202,105 @@ const styles = StyleSheet.create({
   // ─── Amount Card ───────────────────────────────────
   amountCard: {
     marginBottom: spacing['2xl'],
-    padding: 0,
     overflow: 'hidden',
   },
   amountGradient: {
-    padding: spacing['3xl'],
+    padding: spacing['2xl'],
     alignItems: 'center',
-    borderRadius: borderRadius['2xl'],
+    justifyContent: 'center',
   },
   amountLabel: {
-    fontFamily: typography.fontFamily.bodyMedium,
-    fontSize: typography.fontSize.bodyMd,
-    fontWeight: '500',
-    color: 'rgba(255,255,255,0.8)',
+    fontFamily: typography.fontFamily.bodyRegular,
+    fontSize: typography.fontSize.bodySm,
+    color: 'rgba(255, 255, 255, 0.8)',
     marginBottom: 8,
   },
   amountValue: {
     fontFamily: typography.fontFamily.headlineBold,
     fontSize: typography.fontSize.displaySm,
     fontWeight: '800',
-    color: colors.onPrimary,
+    color: '#fff',
     marginBottom: 4,
   },
   amountPlan: {
     fontFamily: typography.fontFamily.bodyRegular,
-    fontSize: typography.fontSize.bodySm,
-    color: 'rgba(255,255,255,0.7)',
+    fontSize: typography.fontSize.bodyMd,
+    color: 'rgba(255, 255, 255, 0.9)',
   },
 
-  // ─── UPI Section ───────────────────────────────────
+  // ─── Error Message ─────────────────────────────────
+  errorContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.errorContainer,
+    borderRadius: borderRadius.lg,
+    padding: spacing.lg,
+    marginBottom: spacing.lg,
+    gap: 12,
+  },
+  errorText: {
+    flex: 1,
+    fontFamily: typography.fontFamily.bodyRegular,
+    fontSize: typography.fontSize.bodyMd,
+    color: colors.error,
+  },
+
+  // ─── Section Title ─────────────────────────────────
   sectionTitle: {
     fontFamily: typography.fontFamily.headlineSemiBold,
-    fontSize: typography.fontSize.titleMd,
+    fontSize: typography.fontSize.headlineSm,
     fontWeight: '700',
     color: colors.onSurface,
     marginBottom: spacing.lg,
   },
+
+  // ─── UPI Grid ──────────────────────────────────────
   upiGrid: {
-    gap: spacing.compactGap,
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.lg,
+    marginBottom: spacing['2xl'],
   },
   upiOption: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.surfaceContainerLowest,
-    borderRadius: borderRadius.xl,
+    flex: 1,
+    minWidth: '45%',
+    borderRadius: borderRadius.lg,
+    borderWidth: 2,
+    borderColor: colors.outline,
     padding: spacing.lg,
-    ...shadows.sm,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   upiOptionSelected: {
-    backgroundColor: colors.primaryFixed,
-    borderWidth: 1.5,
     borderColor: colors.primaryContainer,
+    backgroundColor: colors.primaryContainer + '10',
   },
   upiIconContainer: {
     width: 48,
     height: 48,
     borderRadius: borderRadius.lg,
-    backgroundColor: colors.surfaceContainerHigh,
+    backgroundColor: colors.surfaceContainerLow,
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 16,
+    marginBottom: 8,
   },
   upiIconContainerSelected: {
-    backgroundColor: colors.surfaceContainerLowest,
+    backgroundColor: colors.primaryFixedDim,
   },
   upiLabel: {
     fontFamily: typography.fontFamily.bodySemiBold,
-    fontSize: typography.fontSize.bodyLg,
+    fontSize: typography.fontSize.bodySm,
     fontWeight: '600',
-    color: colors.onSurface,
-    flex: 1,
+    color: colors.onSurfaceVariant,
+    textAlign: 'center',
   },
   upiLabelSelected: {
-    color: colors.primary,
+    color: colors.onSurface,
   },
   checkIcon: {
-    marginLeft: 8,
+    position: 'absolute',
+    top: 8,
+    right: 8,
   },
 
   // ─── Terms ─────────────────────────────────────────
@@ -246,7 +309,6 @@ const styles = StyleSheet.create({
     fontSize: typography.fontSize.bodySm,
     color: colors.onSurfaceVariant,
     textAlign: 'center',
-    marginTop: spacing.lg,
     lineHeight: 18,
   },
   termsLink: {

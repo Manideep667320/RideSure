@@ -30,7 +30,20 @@ const getActivePolicy = async (userId) => {
     return policy;
 };
 
+const getUserPolicies = async (userId) => {
+    const policies = await Policy.find({ userId }).sort({ createdAt: -1 });
+    // Auto-expire policies where endTime has passed
+    for (let policy of policies) {
+        if (policy.status === 'active' && new Date() > policy.endTime) {
+            policy.status = 'expired';
+            await policy.save();
+        }
+    }
+    return policies;
+};
+
 module.exports = {
     createPolicy,
-    getActivePolicy
+    getActivePolicy,
+    getUserPolicies
 };

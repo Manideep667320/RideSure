@@ -10,12 +10,16 @@ import { InputField } from '../../components/ui/InputField';
 import { GradientButton } from '../../components/ui/GradientButton';
 import { ROUTES } from '../../constants/routes';
 import { useAuth } from '../../context/AuthContext';
-import api from '../../services/api';
 import { configureGoogleSignIn, signInWithGoogle } from '../../services/googleSignInService';
 
+type AuthMode = 'phone' | 'email';
+
 const LoginScreen = ({ navigation }: any) => {
+  const [authMode, setAuthMode] = useState<AuthMode>('phone');
   const [phone, setPhone] = useState('');
   const [code, setCode] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   // We use the Native FirebaseAuthTypes confirmation result now! 
   const [confirm, setConfirm] = useState<FirebaseAuthTypes.ConfirmationResult | null>(null);
   const [loading, setLoading] = useState(false);
@@ -26,8 +30,26 @@ const LoginScreen = ({ navigation }: any) => {
   useEffect(() => {
     configureGoogleSignIn();
   }, []);
-  
-  // Notice we completely dropped the Web SDK `RecaptchaVerifier`!
+
+  const handleAuthenticatedUser = async (firebaseToken: string) => {
+    const user = await login(firebaseToken);
+
+    if (!user.name) {
+      navigation.replace('SignUpDetails');
+      return;
+    }
+
+    navigation.reset({
+      index: 0,
+      routes: [{ name: ROUTES.MAIN.HOME }],
+    });
+  };
+
+  const switchAuthMode = (mode: AuthMode) => {
+    setAuthMode(mode);
+    setConfirm(null);
+    setCode('');
+  };
 
   const sendVerification = async () => {
     try {
@@ -54,24 +76,28 @@ const LoginScreen = ({ navigation }: any) => {
       const result = await confirm.confirm(code);
       if (result && result.user) {
          const token = await result.user.getIdToken();
-         
-         // Pass token to Backend to get Mongo Data
-         await login(token);
-         
-         const freshUserResponse = await api.get<any>('/auth/me');
-         
-         if (!freshUserResponse.data.data.name) {
-            navigation.replace('SignUpDetails');
-         } else {
-            navigation.reset({
-               index: 0,
-               routes: [{ name: ROUTES.MAIN.HOME }],
-            });
-         }
+         await handleAuthenticatedUser(token);
       }
 
     } catch (err: any) {
       alert(`Invalid OTP Code: ${err.message}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleEmailSignIn = async () => {
+    try {
+      setLoading(true);
+      const credential = await auth().signInWithEmailAndPassword(
+        email.trim(),
+        password
+      );
+
+      const token = await credential.user.getIdToken();
+      await handleAuthenticatedUser(token);
+    } catch (err: any) {
+      alert(`Email Login Error: ${err.message}`);
     } finally {
       setLoading(false);
     }
@@ -83,19 +109,7 @@ const LoginScreen = ({ navigation }: any) => {
       const result = await signInWithGoogle();
       
       if (result && result.token) {
-        // Pass token to Backend to get Mongo Data
-        await login(result.token);
-        
-        const freshUserResponse = await api.get<any>('/auth/me');
-        
-        if (!freshUserResponse.data.data.name) {
-          navigation.replace('SignUpDetails');
-        } else {
-          navigation.reset({
-            index: 0,
-            routes: [{ name: ROUTES.MAIN.HOME }],
-          });
-        }
+        await handleAuthenticatedUser(result.token);
       }
     } catch (err: any) {
       alert(`Google Sign-In Error: ${err.message}`);
@@ -119,30 +133,115 @@ const LoginScreen = ({ navigation }: any) => {
           </View>
 
           <View style={styles.formSection}>
-            <Text style={styles.welcomeTitle}>{confirm ? "Enter OTP" : "Welcome back"}</Text>
+            <Text style={styles.welcomeTitle}>
+              {authMode === 'phone' && confirm ? 'Enter OTP' : 'Welcome back'}
+            </Text>
+
+            <View style={styles.authModeSwitch}>
+              <TouchableOpacity
+                style={[
+                  styles.authModeTab,
+                  authMode === 'phone' && styles.authModeTabActive,
+                ]}
+                onPress={() => switchAuthMode('phone')}
+              >
+                <Text
+                  style={[
+                    styles.authModeLabel,
+                    authMode === 'phone' && styles.authModeLabelActive,
+                  ]}
+                >
+                  Phone Login
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[
+                  styles.authModeTab,
+                  authMode === 'email' && styles.authModeTabActive,
+                ]}
+                onPress={() => switchAuthMode('email')}
+              >
+                <Text
+                  style={[
+                    styles.authModeLabel,
+                    authMode === 'email' && styles.authModeLabelActive,
+                  ]}
+                >
+                  Email Login
+                </Text>
+              </TouchableOpacity>
+            </View>
             
-            {!confirm ? (
+            {authMode === 'phone' ? (
+              !confirm ? (
+                <>
+                  <View style={styles.inputWrapper}>
+                    <InputField
+                      label="Phone Number"
+                      placeholder="e.g. 98765 43210 (exclude +91)"
+                      value={phone}
+                      onChangeText={setPhone}
+                      keyboardType="phone-pad"
+                    />
+                  </View>
+
+                  <GradientButton 
+                    title={loading ? "Sending..." : "Send Secure OTP"} 
+                    onPress={sendVerification} 
+                    style={{ marginTop: 8 }}
+                  />
+                </>
+              ) : (
+                <>
+                  <View style={styles.inputWrapper}>
+                    <InputField
+                      label="OTP Code from SMS"
+                      placeholder="123456"
+                      value={code}
+                      onChangeText={setCode}
+                      keyboardType="numeric"
+                    />
+                  </View>
+
+                  <GradientButton 
+                    title={loading ? "Verifying..." : "Verify & Seamless Login"} 
+                    onPress={confirmCode} 
+                    style={{ marginTop: 8 }}
+                  />
+                </>
+              )
+            ) : (
               <>
                 <View style={styles.inputWrapper}>
                   <InputField
-                    label="Phone Number"
-                    placeholder="e.g. 98765 43210 (exclude +91)"
-                    value={phone}
-                    onChangeText={setPhone}
-                    keyboardType="phone-pad"
+                    label="Email Address"
+                    placeholder="e.g. rider@ridesure.app"
+                    value={email}
+                    onChangeText={setEmail}
+                    keyboardType="email-address"
                   />
                 </View>
 
-                <GradientButton 
-                  title={loading ? "Sending..." : "Send Secure OTP"} 
-                  onPress={sendVerification} 
+                <View style={styles.inputWrapper}>
+                  <InputField
+                    label="Password"
+                    placeholder="Enter your password"
+                    value={password}
+                    onChangeText={setPassword}
+                    secureTextEntry
+                  />
+                </View>
+
+                <GradientButton
+                  title={loading ? 'Signing in...' : 'Login with Email'}
+                  onPress={handleEmailSignIn}
                   style={{ marginTop: 8 }}
                 />
 
                 {/* Divider */}
                 <View style={styles.dividerContainer}>
                   <View style={styles.dividerLine} />
-                  <Text style={styles.dividerText}>Or</Text>
+                  <Text style={styles.dividerText}>Or use Google</Text>
                   <View style={styles.dividerLine} />
                 </View>
 
@@ -158,24 +257,6 @@ const LoginScreen = ({ navigation }: any) => {
                   </Text>
                 </TouchableOpacity>
               </>
-            ) : (
-               <>
-                <View style={styles.inputWrapper}>
-                   <InputField
-                    label="OTP Code from SMS"
-                    placeholder="123456"
-                    value={code}
-                    onChangeText={setCode}
-                    keyboardType="numeric"
-                  />
-                </View>
-
-                <GradientButton 
-                  title={loading ? "Verifying..." : "Verify & Seamless Login"} 
-                  onPress={confirmCode} 
-                  style={{ marginTop: 8 }}
-                />
-               </>
             )}
           </View>
         </ScrollView>
@@ -194,6 +275,32 @@ const styles = StyleSheet.create({
   logoText: { fontFamily: typography.fontFamily.headlineBold, fontSize: typography.fontSize.titleLg, color: colors.primary },
   brandDesc: { fontFamily: typography.fontFamily.bodyMedium, fontSize: typography.fontSize.bodyLg, color: colors.onSurfaceVariant, lineHeight: 24 },
   formSection: { backgroundColor: colors.surfaceContainerLowest, padding: spacing.xl, borderRadius: borderRadius['2xl'], shadowColor: colors.primary, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.05, shadowRadius: 16, elevation: 2, marginBottom: spacing.xl },
+  authModeSwitch: {
+    flexDirection: 'row',
+    backgroundColor: colors.surfaceContainer,
+    borderRadius: borderRadius.full,
+    padding: spacing.xs,
+    marginBottom: spacing.lg,
+  },
+  authModeTab: {
+    flex: 1,
+    borderRadius: borderRadius.full,
+    paddingVertical: spacing.sm,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  authModeTabActive: {
+    backgroundColor: colors.primary,
+  },
+  authModeLabel: {
+    fontFamily: typography.fontFamily.labelMedium,
+    fontSize: typography.fontSize.labelLg,
+    color: colors.onSurfaceVariant,
+    fontWeight: '600',
+  },
+  authModeLabelActive: {
+    color: colors.onPrimary,
+  },
   welcomeTitle: { fontFamily: typography.fontFamily.headlineBold, fontSize: typography.fontSize.headlineMd, color: colors.onSurface, marginBottom: 16 },
   inputWrapper: { marginBottom: spacing.lg },
   dividerContainer: {
@@ -225,7 +332,7 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   googleButtonText: {
-    fontFamily: typography.fontFamily.labelLarge,
+    fontFamily: typography.fontFamily.labelMedium,
     fontSize: typography.fontSize.labelLg,
     color: colors.primary,
     fontWeight: '600',

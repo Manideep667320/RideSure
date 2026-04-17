@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
@@ -11,39 +11,121 @@ import { shadows } from '../../theme/shadows';
 import { Card } from '../../components/common/Card';
 import { ProgressRing } from '../../components/ui/ProgressRing';
 import { Button } from '../../components/common/Button';
+import { policyService } from '../../services/policyService';
+
+interface TimeRemaining {
+  hours: number;
+  minutes: number;
+  seconds: number;
+  totalSeconds: number;
+}
 
 const ActiveProtectionScreen = ({ navigation }: any) => {
-  const [timeRemaining, setTimeRemaining] = useState({
-    hours: 18,
-    minutes: 42,
-    seconds: 15,
+  const [policy, setPolicy] = useState<any>(null);
+  const [timeRemaining, setTimeRemaining] = useState<TimeRemaining>({
+    hours: 0,
+    minutes: 0,
+    seconds: 0,
+    totalSeconds: 0,
   });
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  // Simulated countdown
   useEffect(() => {
-    const timer = setInterval(() => {
-      setTimeRemaining((prev) => {
-        let { hours, minutes, seconds } = prev;
-        seconds--;
-        if (seconds < 0) {
-          seconds = 59;
-          minutes--;
-        }
-        if (minutes < 0) {
-          minutes = 59;
-          hours--;
-        }
-        if (hours < 0) {
-          clearInterval(timer);
-          return { hours: 0, minutes: 0, seconds: 0 };
-        }
-        return { hours, minutes, seconds };
-      });
-    }, 1000);
-    return () => clearInterval(timer);
+    fetchActivePolicy();
   }, []);
 
-  const progress = (timeRemaining.hours * 3600 + timeRemaining.minutes * 60 + timeRemaining.seconds) / (24 * 3600);
+  const fetchActivePolicy = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const response = await policyService.getActivePolicy();
+      
+      if (response && response.data) {
+        setPolicy(response.data);
+      } else {
+        setError('No active protection found');
+      }
+    } catch (err: any) {
+      console.error('Error fetching policy:', err);
+      setError(err.message || 'Failed to load protection details');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Countdown timer
+  useEffect(() => {
+    if (!policy) return;
+
+    const updateTimer = () => {
+      const now = new Date().getTime();
+      const endTime = new Date(policy.endTime).getTime();
+      const remaining = Math.max(0, endTime - now);
+
+      const hours = Math.floor(remaining / (1000 * 60 * 60));
+      const minutes = Math.floor((remaining % (1000 * 60 * 60)) / (1000 * 60));
+      const seconds = Math.floor((remaining % (1000 * 60)) / 1000);
+
+      setTimeRemaining({
+        hours,
+        minutes,
+        seconds,
+        totalSeconds: remaining / 1000,
+      });
+
+      if (remaining === 0) {
+        clearInterval(timer);
+      }
+    };
+
+    updateTimer();
+    const timer = setInterval(updateTimer, 1000);
+    return () => clearInterval(timer);
+  }, [policy]);
+
+  const totalDuration = policy
+    ? (new Date(policy.endTime).getTime() - new Date(policy.startTime).getTime()) / 1000
+    : 24 * 3600;
+  const progress = Math.max(0, timeRemaining.totalSeconds / totalDuration);
+
+  if (loading) {
+    return (
+      <SafeAreaView style={styles.safeArea}>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={colors.primaryContainer} />
+          <Text style={styles.loadingText}>Loading your protection...</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  if (error || !policy) {
+    return (
+      <SafeAreaView style={styles.safeArea}>
+        <View style={styles.errorContainer}>
+          <Ionicons name="alert-circle-outline" size={48} color={colors.error} />
+          <Text style={styles.errorText}>{error || 'No active protection found'}</Text>
+          <Button
+            title="View Plans"
+            onPress={() => navigation.navigate('PlanSelection')}
+            style={{ marginTop: spacing.lg }}
+          />
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  const startDate = new Date(policy.startTime).toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  });
+  const endDate = new Date(policy.endTime).toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  });
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -95,7 +177,9 @@ const ActiveProtectionScreen = ({ navigation }: any) => {
                 {String(timeRemaining.minutes).padStart(2, '0')}:
                 {String(timeRemaining.seconds).padStart(2, '0')}
               </Text>
-              <Text style={styles.timerUnit}>hours remaining</Text>
+              <Text style={styles.timerUnit}>
+                {policy.type === 'daily' ? 'hours remaining' : 'hours remaining'}
+              </Text>
             </ProgressRing>
           </View>
         </Card>
@@ -106,33 +190,49 @@ const ActiveProtectionScreen = ({ navigation }: any) => {
             <View style={styles.policyIconBg}>
               <Ionicons name="document-text" size={20} color={colors.primaryContainer} />
             </View>
-            <Text style={styles.policyTitle}>Policy Number</Text>
+            <Text style={styles.policyTitle}>Policy Information</Text>
           </View>
-          <Text style={styles.policyNumber}>IG-2024-8842-TX</Text>
+          <View style={styles.policyMeta}>
+            <Text style={styles.policyMetaLabel}>Policy ID:</Text>
+            <Text style={styles.policyMetaValue}>{policy._id?.slice(-8).toUpperCase() || 'RIDESURE-001'}</Text>
+          </View>
           <View style={styles.policyMeta}>
             <Text style={styles.policyMetaLabel}>Type:</Text>
-            <Text style={styles.policyMetaValue}>Comprehensive Gig Liability</Text>
+            <Text style={styles.policyMetaValue}>
+              {policy.type === 'daily' ? '24-Hour' : '7-Day'} Protection
+            </Text>
+          </View>
+          <View style={styles.policyMeta}>
+            <Text style={styles.policyMetaLabel}>Status:</Text>
+            <View style={[styles.statusBadge, { backgroundColor: colors.successContainer }]}>
+              <Text style={styles.statusBadgeText}>ACTIVE</Text>
+            </View>
           </View>
         </Card>
 
-        {/* ─── Coverage Zone ───────────────────────────────── */}
+        {/* ─── Coverage Period ──────────────────────────────– */}
         <Card style={styles.coverageCard}>
           <View style={styles.coverageHeader}>
             <View style={styles.coverageIconBg}>
-              <Ionicons name="location" size={20} color={colors.secondary} />
+              <Ionicons name="calendar-outline" size={20} color={colors.secondary} />
             </View>
-            <Text style={styles.coverageTitle}>Coverage Zone</Text>
+            <Text style={styles.coverageTitle}>Coverage Period</Text>
           </View>
 
-          {/* Map placeholder */}
-          <View style={styles.mapPlaceholder}>
-            <LinearGradient
-              colors={['rgba(37, 117, 252, 0.08)', 'rgba(106, 17, 203, 0.05)']}
-              style={styles.mapGradient}
-            >
-              <Ionicons name="map-outline" size={48} color={colors.primaryContainer} />
-              <Text style={styles.mapText}>Standard 25-mile Radius</Text>
-            </LinearGradient>
+          <View style={styles.periodRow}>
+            <View style={styles.periodItem}>
+              <Text style={styles.periodLabel}>From</Text>
+              <Text style={styles.periodValue}>{startDate}</Text>
+            </View>
+            <View style={styles.periodSeparator}>
+              <View style={styles.periodLine} />
+              <Ionicons name="arrow-forward" size={16} color={colors.onSurfaceVariant} />
+              <View style={styles.periodLine} />
+            </View>
+            <View style={styles.periodItem}>
+              <Text style={styles.periodLabel}>To</Text>
+              <Text style={styles.periodValue}>{endDate}</Text>
+            </View>
           </View>
         </Card>
 
@@ -148,11 +248,11 @@ const ActiveProtectionScreen = ({ navigation }: any) => {
             title="View History"
             variant="outline"
             onPress={() => navigation.navigate('History')}
-            style={{ flex: 1 }}
+            style={{ flex: 1, marginLeft: spacing.md }}
           />
         </View>
 
-        <View style={{ height: 40 }} />
+        <View style={{ height: 20 }} />
       </ScrollView>
     </SafeAreaView>
   );
@@ -170,12 +270,40 @@ const styles = StyleSheet.create({
     padding: spacing.screenPadding,
   },
 
+  // ─── Loading State ─────────────────────────────────
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    marginTop: spacing.lg,
+    fontFamily: typography.fontFamily.bodySemiBold,
+    fontSize: typography.fontSize.bodyMd,
+    color: colors.onSurfaceVariant,
+  },
+
+  // ─── Error State ───────────────────────────────────
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: spacing.screenPadding,
+  },
+  errorText: {
+    marginTop: spacing.lg,
+    fontFamily: typography.fontFamily.bodySemiBold,
+    fontSize: typography.fontSize.bodyMd,
+    color: colors.error,
+    textAlign: 'center',
+  },
+
   // ─── Header ────────────────────────────────────────
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: spacing['2xl'],
+    marginBottom: spacing['3xl'],
   },
   backButton: {
     width: 40,
@@ -204,96 +332,98 @@ const styles = StyleSheet.create({
     color: colors.onSurface,
   },
 
-  // ─── Hero ──────────────────────────────────────────
+  // ─── Hero Section ──────────────────────────────────
   heroSection: {
     alignItems: 'center',
     marginBottom: spacing['3xl'],
   },
   heroCheckContainer: {
-    marginBottom: 16,
+    marginBottom: spacing.lg,
   },
   heroCheckBg: {
-    width: 56,
-    height: 56,
-    borderRadius: borderRadius.full,
+    width: 80,
+    height: 80,
+    borderRadius: 40,
     alignItems: 'center',
     justifyContent: 'center',
-    ...shadows.primaryTinted,
+    shadowColor: '#6a11cb',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.15,
+    shadowRadius: 24,
+    elevation: 6,
   },
   heroTitle: {
     fontFamily: typography.fontFamily.headlineBold,
-    fontSize: typography.fontSize.headlineSm,
-    fontWeight: '800',
-    color: colors.primaryContainer,
-  },
-
-  // ─── Timer ─────────────────────────────────────────
-  timerCard: {
-    marginBottom: spacing.sectionGap,
-    alignItems: 'center',
-  },
-  timerLabel: {
-    fontFamily: typography.fontFamily.labelMedium,
-    fontSize: typography.fontSize.labelMd,
-    color: colors.onSurfaceVariant,
-    textTransform: 'uppercase',
-    letterSpacing: 1,
-    marginBottom: spacing.xl,
-  },
-  timerContainer: {
-    alignItems: 'center',
-  },
-  timerValue: {
-    fontFamily: typography.fontFamily.headlineBold,
-    fontSize: typography.fontSize.headlineSm,
+    fontSize: typography.fontSize.displaySm,
     fontWeight: '800',
     color: colors.onSurface,
   },
+
+  // ─── Timer Card ────────────────────────────────────
+  timerCard: {
+    marginBottom: spacing['2xl'],
+  },
+  timerLabel: {
+    fontFamily: typography.fontFamily.bodySemiBold,
+    fontSize: typography.fontSize.bodyMd,
+    fontWeight: '600',
+    color: colors.onSurfaceVariant,
+    textAlign: 'center',
+    marginBottom: spacing.lg,
+  },
+  timerContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  timerValue: {
+    fontFamily: typography.fontFamily.headlineBold,
+    fontSize: typography.fontSize.headlineLg,
+    fontWeight: '800',
+    color: colors.onSurface,
+    textAlign: 'center',
+  },
   timerUnit: {
     fontFamily: typography.fontFamily.bodyRegular,
-    fontSize: typography.fontSize.labelMd,
+    fontSize: typography.fontSize.bodySm,
     color: colors.onSurfaceVariant,
-    marginTop: 2,
+    marginTop: 4,
   },
 
-  // ─── Policy ────────────────────────────────────────
+  // ─── Policy Card ───────────────────────────────────
   policyCard: {
-    marginBottom: spacing.sectionGap,
+    marginBottom: spacing.lg,
   },
   policyHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
-    marginBottom: 12,
+    gap: spacing.lg,
+    marginBottom: spacing.lg,
   },
   policyIconBg: {
-    width: 40,
-    height: 40,
+    width: 44,
+    height: 44,
     borderRadius: borderRadius.lg,
     backgroundColor: colors.primaryFixed,
     alignItems: 'center',
     justifyContent: 'center',
   },
   policyTitle: {
-    fontFamily: typography.fontFamily.bodySemiBold,
-    fontSize: typography.fontSize.titleSm,
-    fontWeight: '600',
-    color: colors.onSurface,
-  },
-  policyNumber: {
-    fontFamily: typography.fontFamily.headlineBold,
+    fontFamily: typography.fontFamily.headlineSemiBold,
     fontSize: typography.fontSize.titleMd,
     fontWeight: '700',
-    color: colors.primary,
-    marginBottom: 8,
+    color: colors.onSurface,
   },
   policyMeta: {
     flexDirection: 'row',
-    gap: 6,
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.outlineVariant,
   },
   policyMetaLabel: {
     fontFamily: typography.fontFamily.bodyRegular,
-    fontSize: typography.fontSize.bodyMd,
+    fontSize: typography.fontSize.bodySm,
     color: colors.onSurfaceVariant,
   },
   policyMetaValue: {
@@ -302,53 +432,77 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: colors.onSurface,
   },
+  statusBadge: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: 4,
+    borderRadius: borderRadius.full,
+  },
+  statusBadgeText: {
+    fontFamily: typography.fontFamily.bodySemiBold,
+    fontSize: typography.fontSize.bodySm,
+    fontWeight: '600',
+    color: colors.onSuccess,
+  },
 
-  // ─── Coverage ──────────────────────────────────────
+  // ─── Coverage Card ─────────────────────────────────
   coverageCard: {
-    marginBottom: spacing.sectionGap,
+    marginBottom: spacing['2xl'],
   },
   coverageHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
-    marginBottom: 16,
+    gap: spacing.lg,
+    marginBottom: spacing.lg,
   },
   coverageIconBg: {
-    width: 40,
-    height: 40,
+    width: 44,
+    height: 44,
     borderRadius: borderRadius.lg,
-    backgroundColor: colors.secondaryFixedDim + '20',
+    backgroundColor: colors.secondaryFixed,
     alignItems: 'center',
     justifyContent: 'center',
   },
   coverageTitle: {
-    fontFamily: typography.fontFamily.bodySemiBold,
-    fontSize: typography.fontSize.titleSm,
-    fontWeight: '600',
+    fontFamily: typography.fontFamily.headlineSemiBold,
+    fontSize: typography.fontSize.titleMd,
+    fontWeight: '700',
     color: colors.onSurface,
   },
-  mapPlaceholder: {
-    borderRadius: borderRadius.xl,
-    overflow: 'hidden',
-  },
-  mapGradient: {
-    height: 160,
-    borderRadius: borderRadius.xl,
+  periodRow: {
+    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    gap: 12,
+    justifyContent: 'space-between',
   },
-  mapText: {
+  periodItem: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  periodLabel: {
+    fontFamily: typography.fontFamily.bodyRegular,
+    fontSize: typography.fontSize.bodySm,
+    color: colors.onSurfaceVariant,
+    marginBottom: 4,
+  },
+  periodValue: {
     fontFamily: typography.fontFamily.bodySemiBold,
     fontSize: typography.fontSize.bodyMd,
     fontWeight: '600',
-    color: colors.onSurfaceVariant,
+    color: colors.onSurface,
+  },
+  periodSeparator: {
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  periodLine: {
+    width: 24,
+    height: 1,
+    backgroundColor: colors.outlineVariant,
   },
 
-  // ─── Actions ───────────────────────────────────────
+  // ─── Actions Row ───────────────────────────────────
   actionsRow: {
     flexDirection: 'row',
-    gap: spacing.compactGap,
+    gap: spacing.md,
   },
 });
 

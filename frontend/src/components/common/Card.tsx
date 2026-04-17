@@ -2,7 +2,6 @@ import React from 'react';
 import { View, StyleSheet, ViewStyle, StyleProp } from 'react-native';
 import { colors } from '../../theme/colors';
 import { spacing, borderRadius } from '../../theme/spacing';
-import { shadows } from '../../theme/shadows';
 
 interface CardProps {
   children: React.ReactNode;
@@ -24,26 +23,26 @@ export const Card = ({
   const getBackgroundColor = (): string => {
     switch (level) {
       case 'lowest':
-        return colors.surfaceContainerLowest; // #ffffff - max lift
+        return colors.surfaceContainerLowest;
       case 'low':
-        return colors.surfaceContainerLow;    // #f3f4f5
+        return colors.surfaceContainerLow;
       case 'default':
-        return colors.surfaceContainer;       // #edeeef
+        return colors.surfaceContainer;
       case 'high':
-        return colors.surfaceContainerHigh;   // #e7e8e9
+        return colors.surfaceContainerHigh;
     }
   };
 
-  const getShadow = () => {
+  const getVariantStyle = () => {
     switch (variant) {
       case 'elevated':
-        return shadows.sm;
+        return styles.elevatedVariant;
       case 'surface':
-        return shadows.none;
+        return styles.surfaceVariant;
       case 'outlined':
-        return shadows.none;
+        return styles.outlinedVariant;
       default:
-        return shadows.none;
+        return styles.surfaceVariant;
     }
   };
 
@@ -52,8 +51,7 @@ export const Card = ({
       style={[
         styles.card,
         { backgroundColor: getBackgroundColor() },
-        getShadow(),
-        variant === 'outlined' && styles.outlined,
+        getVariantStyle(),
         style,
       ]}
     >
@@ -64,12 +62,30 @@ export const Card = ({
 
 const styles = StyleSheet.create({
   card: {
-    borderRadius: borderRadius['2xl'], // 24px — primary card radius
+    borderRadius: borderRadius['2xl'],
     padding: spacing.cardPadding,
   },
-  outlined: {
-    // Ghost Border: outlineVariant at 15% opacity
+  elevatedVariant: {
+    shadowColor: '#191c1d',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.04,
+    shadowRadius: 12,
+    elevation: 2,
+  },
+  surfaceVariant: {
+    shadowColor: 'transparent',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0,
+    shadowRadius: 0,
+    elevation: 0,
+  },
+  outlinedVariant: {
     borderWidth: 1,
     borderColor: 'rgba(205, 194, 215, 0.15)',
+    shadowColor: 'transparent',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0,
+    shadowRadius: 0,
+    elevation: 0,
   },
 });

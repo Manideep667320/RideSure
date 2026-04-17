@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
@@ -10,17 +10,138 @@ import { gradients } from '../../theme/gradients';
 import { shadows } from '../../theme/shadows';
 import { HistoryCard } from '../../components/ui/HistoryCard';
 import { SectionHeader } from '../../components/ui/SectionHeader';
+import { claimService } from '../../services/claimService';
+import { policyService } from '../../services/policyService';
+import { formatCurrency } from '../../utils/formatCurrency';
 
 type FilterTab = 'all' | 'policies' | 'claims';
 
+interface HistoryItem {
+  id: string;
+  title: string;
+  subtitle: string;
+  policyNumber: string;
+  amount: string;
+  amountLabel: string;
+  date: string;
+  status: 'active' | 'approved' | 'expired' | 'processing';
+  statusLabel: string;
+  icon: string;
+  type: 'policy' | 'claim';
+  createdAt: string;
+}
+
 const HistoryScreen = ({ navigation }: any) => {
   const [activeTab, setActiveTab] = useState<FilterTab>('all');
+  const [historyItems, setHistoryItems] = useState<HistoryItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   const tabs: { id: FilterTab; label: string }[] = [
     { id: 'all', label: 'All' },
     { id: 'policies', label: 'Policies' },
     { id: 'claims', label: 'Claims' },
   ];
+
+  useEffect(() => {
+    fetchHistoryData();
+  }, []);
+
+  const fetchHistoryData = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      // Fetch both claims and policies
+      const [claimsRes, policiesRes] = await Promise.all([
+        claimService.getClaims().catch(err => {
+          console.warn('Claims fetch error:', err);
+          return { data: [] };
+        }),
+        policyService.getPolicies().catch(err => {
+          console.warn('Policies fetch error:', err);
+          return { data: [] };
+        }),
+      ]);
+
+      const items: HistoryItem[] = [];
+
+      // Transform claims data
+      if (claimsRes && claimsRes.data) {
+        const claims = Array.isArray(claimsRes.data) ? claimsRes.data : [];
+        claims.forEach((claim: any) => {
+          items.push({
+            id: claim._id,
+            title: 'Claim Submission',
+            subtitle: claim.description || 'Claim submitted',
+            policyNumber: claim.policyId ? `#${claim.policyId._id?.slice(-6).toUpperCase()}` : 'No Policy',
+            amount: '$0.00',
+            amountLabel: 'Status',
+            date: new Date(claim.createdAt).toLocaleDateString('en-US', {
+              month: 'short',
+              day: 'numeric',
+              year: 'numeric',
+            }),
+            status: claim.status?.toLowerCase() === 'approved' ? 'approved' : 
+                    claim.status?.toLowerCase() === 'pending' ? 'processing' : 'active',
+            statusLabel: claim.status || 'PENDING',
+            icon: 'medkit-outline',
+            type: 'claim',
+            createdAt: claim.createdAt,
+          });
+        });
+      }
+
+      // Transform policies data
+      if (policiesRes && policiesRes.data) {
+        const policies = Array.isArray(policiesRes.data) ? policiesRes.data : [];
+        policies.forEach((policy: any) => {
+          const startDate = new Date(policy.startTime).toLocaleDateString('en-US', {
+            month: 'short',
+            day: 'numeric',
+            year: 'numeric',
+          });
+          const endDate = new Date(policy.endTime).toLocaleDateString('en-US', {
+            month: 'short',
+            day: 'numeric',
+            year: 'numeric',
+          });
+          
+          items.push({
+            id: policy._id,
+            title: policy.type === 'daily' ? 'Daily Protection' : 'Weekly Protection',
+            subtitle: `${policy.type === 'daily' ? '24-hour' : '7-day'} coverage • #${policy._id?.slice(-6).toUpperCase()}`,
+            policyNumber: `#${policy._id?.slice(-6).toUpperCase()}`,
+            amount: '$0.00',
+            amountLabel: 'Coverage',
+            date: `${startDate} - ${endDate}`,
+            status: (policy.status as any) || 'active',
+            statusLabel: policy.status?.charAt(0).toUpperCase() + policy.status?.slice(1) || 'Active',
+            icon: 'shield-outline',
+            type: 'policy',
+            createdAt: policy.createdAt,
+          });
+        });
+      }
+
+      // Sort by creation date (newest first)
+      items.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+
+      setHistoryItems(items);
+    } catch (err: any) {
+      console.error('Error fetching history:', err);
+      setError(err.message || 'Failed to load history');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const filteredItems = historyItems.filter((item) => {
+    if (activeTab === 'all') return true;
+    if (activeTab === 'claims') return item.type === 'claim';
+    if (activeTab === 'policies') return item.type === 'policy';
+    return true;
+  });
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -78,59 +199,56 @@ const HistoryScreen = ({ navigation }: any) => {
           ))}
         </View>
 
-        {/* ─── Activity List ───────────────────────────────── */}
-        <Text style={styles.listTitle}>Recent Activity</Text>
+        {/* ─── Loading State ───────────────────────────────── */}
+        {loading ? (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color={colors.primaryContainer} />
+            <Text style={styles.loadingText}>Loading your history...</Text>
+          </View>
+        ) : error ? (
+          <View style={styles.errorContainer}>
+            <Ionicons name="alert-circle-outline" size={48} color={colors.error} />
+            <Text style={styles.errorText}>{error}</Text>
+            <TouchableOpacity
+              style={styles.retryButton}
+              onPress={fetchHistoryData}
+            >
+              <Text style={styles.retryButtonText}>Retry</Text>
+            </TouchableOpacity>
+          </View>
+        ) : filteredItems.length === 0 ? (
+          <View style={styles.emptyContainer}>
+            <Ionicons name="inbox-outline" size={48} color={colors.onSurfaceVariant} />
+            <Text style={styles.emptyText}>
+              {activeTab === 'claims'
+                ? 'No claims yet'
+                : activeTab === 'policies'
+                ? 'No policies yet'
+                : 'No activity yet'}
+            </Text>
+          </View>
+        ) : (
+          <>
+            {/* ─── Activity List ───────────────────────────────── */}
+            <Text style={styles.listTitle}>Recent Activity</Text>
 
-        <HistoryCard
-          title="Vehicle Liability"
-          subtitle="Gig-Ride Protect • #P-89221"
-          policyNumber="#P-89221"
-          amount="$42.00"
-          amountLabel="Premium Paid"
-          date="Oct 24, 2023"
-          status="expired"
-          statusLabel="Ended"
-          icon="car-outline"
-          style={{ marginBottom: spacing.lg }}
-        />
-
-        <HistoryCard
-          title="Injury Claim"
-          subtitle="Courier Shield • #C-77410"
-          policyNumber="#C-77410"
-          amount="$1,250.00"
-          amountLabel="Payout Sent to Wallet"
-          date="Sep 12, 2023"
-          status="approved"
-          statusLabel="Approved"
-          icon="medkit-outline"
-          style={{ marginBottom: spacing.lg }}
-        />
-
-        <HistoryCard
-          title="Equipment Transit"
-          subtitle="Asset Guard • #P-89255"
-          policyNumber="#P-89255"
-          amount="$5,000.00"
-          amountLabel="Coverage"
-          status="active"
-          statusLabel="Active"
-          icon="cube-outline"
-          style={{ marginBottom: spacing.lg }}
-        />
-
-        <HistoryCard
-          title="Liability Coverage"
-          subtitle="Service Shield • #P-81109"
-          policyNumber="#P-81109"
-          amount="$120.00"
-          amountLabel="Premium"
-          date="Jul 2023 - Aug 2023"
-          status="expired"
-          statusLabel="Expired"
-          icon="shield-outline"
-          style={{ marginBottom: spacing.lg }}
-        />
+            {filteredItems.map((item) => (
+              <HistoryCard
+                key={item.id}
+                title={item.title}
+                subtitle={item.subtitle}
+                policyNumber={item.policyNumber}
+                amount={item.amount}
+                amountLabel={item.amountLabel}
+                date={item.date}
+                status={item.status}
+                statusLabel={item.statusLabel}
+                icon={item.icon}
+                style={{ marginBottom: spacing.lg }}
+              />
+            ))}
+          </>
+        )}
 
         <View style={{ height: 40 }} />
       </ScrollView>
@@ -217,6 +335,63 @@ const styles = StyleSheet.create({
     color: colors.onSurface,
     marginBottom: spacing.lg,
   },
+
+  // ─── Loading State ─────────────────────────────────
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    minHeight: 300,
+  },
+  loadingText: {
+    marginTop: spacing.lg,
+    fontFamily: typography.fontFamily.bodySemiBold,
+    fontSize: typography.fontSize.bodyMd,
+    color: colors.onSurfaceVariant,
+  },
+
+  // ─── Error State ───────────────────────────────────
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    minHeight: 300,
+  },
+  errorText: {
+    marginTop: spacing.lg,
+    fontFamily: typography.fontFamily.bodySemiBold,
+    fontSize: typography.fontSize.bodyMd,
+    color: colors.error,
+    textAlign: 'center',
+  },
+  retryButton: {
+    marginTop: spacing.lg,
+    paddingHorizontal: spacing.xl,
+    paddingVertical: spacing.md,
+    borderRadius: borderRadius.full,
+    backgroundColor: colors.primaryContainer,
+  },
+  retryButtonText: {
+    fontFamily: typography.fontFamily.bodySemiBold,
+    fontSize: typography.fontSize.bodyMd,
+    fontWeight: '600',
+    color: colors.onPrimary,
+  },
+
+  // ─── Empty State ───────────────────────────────────
+  emptyContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    minHeight: 300,
+  },
+  emptyText: {
+    marginTop: spacing.lg,
+    fontFamily: typography.fontFamily.bodySemiBold,
+    fontSize: typography.fontSize.bodyMd,
+    color: colors.onSurfaceVariant,
+  },
 });
 
 export default HistoryScreen;
+

@@ -37,7 +37,13 @@ const getClaimDetails = async (claimId, userId) => {
     return claim;
 };
 
+const getUserClaims = async (userId) => {
+    const claims = await Claim.find({ userId }).populate('policyId').sort({ createdAt: -1 });
+    return claims;
+};
+
 module.exports = {
     submitClaim,
-    getClaimDetails
+    getClaimDetails,
+    getUserClaims
 };

@@ -41,6 +41,8 @@ const ProfileScreen = ({ navigation }: any) => {
     return name.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2);
   };
 
+  const contactLine = user?.email || user?.phone || 'No contact details available';
+
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.header}>
@@ -65,7 +67,7 @@ const ProfileScreen = ({ navigation }: any) => {
             <Text style={styles.avatarInitials}>{getInitials(user?.name)}</Text>
           </LinearGradient>
           <Text style={styles.userName}>{user?.name || 'Guest User'}</Text>
-          <Text style={styles.userRole}>{user?.phone || 'No Phone Registered'}</Text>
+          <Text style={styles.userRole}>{contactLine}</Text>
         </View>
 
         {/* Stats Card */}
@@ -88,19 +90,22 @@ const ProfileScreen = ({ navigation }: any) => {
             <ProfileItem 
               icon="person-outline" 
               title="Personal Information" 
-              subtitle="Update your name, phone" 
+              subtitle="Manage profile and contact details" 
+              onPress={() => navigation.navigate(ROUTES.MAIN.PERSONAL_INFO)}
             />
             <View style={styles.linkDivider} />
             <ProfileItem 
               icon="card-outline" 
               title="Payment Methods" 
               subtitle="Manage UPI and cards" 
+              onPress={() => navigation.navigate(ROUTES.MAIN.PAYMENT_METHODS)}
             />
             <View style={styles.linkDivider} />
             <ProfileItem 
               icon="shield-checkmark-outline" 
               title="Insurance Documents" 
               subtitle="View policy PDFs" 
+              onPress={() => navigation.navigate(ROUTES.MAIN.INSURANCE_DOCUMENTS)}
             />
           </Card>
         </View>
@@ -111,11 +116,13 @@ const ProfileScreen = ({ navigation }: any) => {
             <ProfileItem 
               icon="help-buoy-outline" 
               title="Help Center" 
+              onPress={() => navigation.navigate(ROUTES.MAIN.HELP_CENTER)}
             />
             <View style={styles.linkDivider} />
             <ProfileItem 
               icon="document-text-outline" 
-              title="Terms & Privacy" 
+              title="Terms & Policy" 
+              onPress={() => navigation.navigate(ROUTES.MAIN.TERMS_POLICY)}
             />
           </Card>
         </View>

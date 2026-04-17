@@ -25,8 +25,25 @@ const protect = async (req, res, next) => {
             if (!user) {
                 user = await User.create({
                     firebaseUid: decodedToken.uid,
-                    phone: decodedToken.phone_number
+                    phone: decodedToken.phone_number,
+                    email: decodedToken.email,
+                    name: decodedToken.name
                 });
+            } else {
+                const patch = {};
+                if (!user.phone && decodedToken.phone_number) {
+                    patch.phone = decodedToken.phone_number;
+                }
+                if (!user.email && decodedToken.email) {
+                    patch.email = decodedToken.email;
+                }
+                if (!user.name && decodedToken.name) {
+                    patch.name = decodedToken.name;
+                }
+
+                if (Object.keys(patch).length) {
+                    user = await User.findByIdAndUpdate(user._id, patch, { new: true });
+                }
             }
 
             // Attach MongoDB user info to the request for subsequent controllers

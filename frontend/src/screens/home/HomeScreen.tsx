@@ -1,27 +1,85 @@
-import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../../theme/colors';
 import { spacing, borderRadius } from '../../theme/spacing';
 import { typography } from '../../theme/typography';
-import { shadows } from '../../theme/shadows';
 import { gradients } from '../../theme/gradients';
 import { Card } from '../../components/common/Card';
 import { GradientButton } from '../../components/ui/GradientButton';
 import { StatusBadge } from '../../components/ui/StatusBadge';
 import { useAuth } from '../../context/AuthContext';
+import { policyService } from '../../services/policyService';
+import { ROUTES } from '../../constants/routes';
 
 const HomeScreen = ({ navigation }: any) => {
   const { user } = useAuth();
-  
+  const [activePolicy, setActivePolicy] = useState<any>(null);
+  const [timeRemaining, setTimeRemaining] = useState({
+    hours: 0,
+    minutes: 0,
+    seconds: 0,
+  });
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+
+  useEffect(() => {
+    fetchActivePolicy();
+  }, []);
+
+  const fetchActivePolicy = async () => {
+    try {
+      setLoading(true);
+      const response = await policyService.getActivePolicy();
+      if (response && response.data) {
+        setActivePolicy(response.data);
+      } else {
+        setActivePolicy(null);
+      }
+    } catch (err) {
+      console.error('Error fetching active policy:', err);
+      setActivePolicy(null);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await fetchActivePolicy();
+    setRefreshing(false);
+  };
+
+  // Update countdown timer
+  useEffect(() => {
+    if (!activePolicy) return;
+
+    const updateTimer = () => {
+      const now = new Date().getTime();
+      const endTime = new Date(activePolicy.endTime).getTime();
+      const remaining = Math.max(0, endTime - now);
+
+      const hours = Math.floor(remaining / (1000 * 60 * 60));
+      const minutes = Math.floor((remaining % (1000 * 60 * 60)) / (1000 * 60));
+      const seconds = Math.floor((remaining % (1000 * 60)) / 1000);
+
+      setTimeRemaining({ hours, minutes, seconds });
+    };
+
+    updateTimer();
+    const timer = setInterval(updateTimer, 1000);
+    return () => clearInterval(timer);
+  }, [activePolicy]);
+
   return (
     <SafeAreaView style={styles.safeArea}>
       <ScrollView
         style={styles.container}
         contentContainerStyle={styles.contentContainer}
         showsVerticalScrollIndicator={false}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
       >
         {/* ─── Header ──────────────────────────────────────── */}
         <View style={styles.header}>
@@ -47,32 +105,90 @@ const HomeScreen = ({ navigation }: any) => {
         {/* ─── Greeting ────────────────────────────────────── */}
         <View style={styles.greetingSection}>
           <Text style={styles.greetingTitle}>Hi {user?.name ? user.name.split(' ')[0] : 'Rider'} 👋</Text>
-          <Text style={styles.greetingSubtitle}>Ready for your next shift?</Text>
+          <Text style={styles.greetingSubtitle}>
+            {activePolicy ? "You're protected today!" : 'Ready for your next shift?'}
+          </Text>
         </View>
 
         {/* ─── Protection Status Card ──────────────────────── */}
-        <Card variant="surface" style={styles.protectionCard}>
-          <LinearGradient
-            colors={['rgba(186, 26, 26, 0.08)', 'rgba(186, 26, 26, 0.02)']}
-            style={styles.protectionGradient}
-          >
-            <View style={styles.protectionIconRow}>
-              <View style={styles.protectionIconBg}>
-                <Ionicons name="alert-circle" size={24} color={colors.error} />
-              </View>
-              <StatusBadge status="not_protected" label="NOT PROTECTED" />
+        {loading ? (
+          <Card style={styles.protectionCard}>
+            <View style={styles.loadingContent}>
+              <ActivityIndicator size="small" color={colors.primaryContainer} />
+              <Text style={styles.loadingText}>Checking protection status...</Text>
             </View>
-            <Text style={styles.protectionTitle}>You are NOT Protected</Text>
-            <Text style={styles.protectionDesc}>
-              Your current activities are not insured.
-            </Text>
-            <GradientButton
-              title="Get Protected Now"
-              onPress={() => navigation.navigate('PlanSelection')}
-              style={{ marginTop: 16 }}
-            />
-          </LinearGradient>
-        </Card>
+          </Card>
+        ) : activePolicy ? (
+          <Card variant="surface" style={styles.protectionCard}>
+            <LinearGradient
+              colors={['rgba(76, 175, 80, 0.08)', 'rgba(76, 175, 80, 0.02)']}
+              style={styles.protectionGradient}
+            >
+              <View style={styles.protectionIconRow}>
+                <View style={styles.protectionIconBg}>
+                  <Ionicons name="shield-checkmark" size={24} color={colors.primary} />
+                </View>
+                <StatusBadge status="active" label="PROTECTED" />
+              </View>
+              <Text style={styles.protectionTitle}>You are Protected</Text>
+              <Text style={styles.protectionDesc}>
+                Your {activePolicy.type === 'daily' ? '24-hour' : '7-day'} coverage is active
+              </Text>
+
+              {/* ─── Time Remaining Display ──────────────────– */}
+              <View style={styles.timeRemainingBox}>
+                <View style={styles.timeItem}>
+                  <Text style={styles.timeValue}>{String(timeRemaining.hours).padStart(2, '0')}</Text>
+                  <Text style={styles.timeLabel}>Hours</Text>
+                </View>
+                <View style={styles.timeSeparator}>
+                  <Text style={styles.timeDots}>:</Text>
+                </View>
+                <View style={styles.timeItem}>
+                  <Text style={styles.timeValue}>{String(timeRemaining.minutes).padStart(2, '0')}</Text>
+                  <Text style={styles.timeLabel}>Min</Text>
+                </View>
+                <View style={styles.timeSeparator}>
+                  <Text style={styles.timeDots}>:</Text>
+                </View>
+                <View style={styles.timeItem}>
+                  <Text style={styles.timeValue}>{String(timeRemaining.seconds).padStart(2, '0')}</Text>
+                  <Text style={styles.timeLabel}>Sec</Text>
+                </View>
+              </View>
+
+              {/* ─── View Details Button ──────────────────── */}
+              <GradientButton
+                title="View Protection Details"
+                onPress={() => navigation.navigate('ActiveProtection')}
+                style={{ marginTop: 16 }}
+              />
+            </LinearGradient>
+          </Card>
+        ) : (
+          <Card variant="surface" style={styles.protectionCard}>
+            <LinearGradient
+              colors={['rgba(186, 26, 26, 0.08)', 'rgba(186, 26, 26, 0.02)']}
+              style={styles.protectionGradient}
+            >
+              <View style={styles.protectionIconRow}>
+                <View style={styles.protectionIconBg}>
+                  <Ionicons name="alert-circle" size={24} color={colors.error} />
+                </View>
+                <StatusBadge status="not_protected" label="NOT PROTECTED" />
+              </View>
+              <Text style={styles.protectionTitle}>You are NOT Protected</Text>
+              <Text style={styles.protectionDesc}>
+                Your current activities are not insured.
+              </Text>
+              <GradientButton
+                title="Get Protected Now"
+                onPress={() => navigation.navigate('PlanSelection')}
+                style={{ marginTop: 16 }}
+              />
+            </LinearGradient>
+          </Card>
+        )}
 
         {/* ─── Plan Details Bento Grid ─────────────────────── */}
         <View style={styles.planSection}>
@@ -99,8 +215,8 @@ const HomeScreen = ({ navigation }: any) => {
             {/* Coverage Card */}
             <Card variant="surface" level="lowest" style={[styles.bentoCard, styles.coverageCard]}>
               <Text style={styles.bentoLabel}>PROTECTION</Text>
-              <Text style={styles.coverageAmount}>₹50,000</Text>
-              <Text style={styles.coverageDesc}>accident protection included</Text>
+              <Text style={styles.bentoAmountLarge}>₹50,000</Text>
+              <Text style={styles.bentoDesc}>accident protection included</Text>
             </Card>
           </View>
         </View>
@@ -120,18 +236,18 @@ const HomeScreen = ({ navigation }: any) => {
 
         {/* ─── Testimonial Card ────────────────────────────── */}
         <Card variant="surface" level="low" style={styles.testimonialCard}>
-          <Ionicons name="chatbubble-ellipses-outline" size={24} color={colors.secondary} />
-          <Text style={styles.testimonialText}>
-            "RideSure has saved me ₹4,500 in medical bills last month."
-          </Text>
-          <Text style={styles.testimonialAuthor}>- Sumit, Delivery Partner</Text>
+          <View style={styles.testimonialRow}>
+            <Text style={styles.testimonialText} numberOfLines={2}>
+              "Finally, protection that lets me work without worry. Recommend to all gig workers." 
+            </Text>
+            <Text style={styles.testimonialAuthor}>— Akshay M.</Text>
+          </View>
         </Card>
 
-        {/* ─── Bottom spacing ──────────────────────────────── */}
-        <View style={{ height: 100 }} />
+        <View style={{ height: 40 }} />
       </ScrollView>
 
-      {/* ─── Bottom Navigation ─────────────────────────────── */}
+      {/* ─── Bottom Navigation ───────────────────────────── */}
       <View style={styles.bottomNav}>
         <TouchableOpacity style={styles.navItem}>
           <Ionicons name="home" size={22} color={colors.primary} />
@@ -139,21 +255,21 @@ const HomeScreen = ({ navigation }: any) => {
         </TouchableOpacity>
         <TouchableOpacity
           style={styles.navItem}
-          onPress={() => navigation.navigate('PlanSelection')}
+          onPress={() => navigation.navigate(ROUTES.MAIN.PLAN_SELECTION)}
         >
           <Ionicons name="shield-outline" size={22} color={colors.onSurfaceVariant} />
           <Text style={styles.navLabel}>Plans</Text>
         </TouchableOpacity>
         <TouchableOpacity
           style={styles.navItem}
-          onPress={() => navigation.navigate('ClaimForm')}
+          onPress={() => navigation.navigate(ROUTES.MAIN.CLAIM_FORM)}
         >
           <Ionicons name="document-text-outline" size={22} color={colors.onSurfaceVariant} />
           <Text style={styles.navLabel}>Claims</Text>
         </TouchableOpacity>
         <TouchableOpacity
           style={styles.navItem}
-          onPress={() => navigation.navigate('History')}
+          onPress={() => navigation.navigate(ROUTES.MAIN.HISTORY)}
         >
           <Ionicons name="time-outline" size={22} color={colors.onSurfaceVariant} />
           <Text style={styles.navLabel}>History</Text>
@@ -184,182 +300,235 @@ const styles = StyleSheet.create({
   },
   headerLeft: {
     flexDirection: 'row',
-    alignItems: 'center',
   },
   logoRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
+    gap: 8,
   },
   logoIcon: {
-    width: 36,
-    height: 36,
+    width: 32,
+    height: 32,
     borderRadius: borderRadius.md,
     alignItems: 'center',
     justifyContent: 'center',
   },
   logoText: {
     fontFamily: typography.fontFamily.headlineBold,
-    fontSize: typography.fontSize.titleLg,
+    fontSize: typography.fontSize.titleMd,
     fontWeight: '800',
     color: colors.onSurface,
   },
   profileButton: {
-    padding: 4,
+    width: 40,
+    height: 40,
+    borderRadius: borderRadius.full,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 
-  // ─── Greeting ──────────────────────────────────────
+  // ─── Greeting Section ──────────────────────────────
   greetingSection: {
     marginBottom: spacing['2xl'],
   },
   greetingTitle: {
     fontFamily: typography.fontFamily.headlineBold,
-    fontSize: typography.fontSize.headlineMd,
-    fontWeight: '700',
+    fontSize: typography.fontSize.displayXs,
+    fontWeight: '800',
     color: colors.onSurface,
-    marginBottom: 4,
   },
   greetingSubtitle: {
     fontFamily: typography.fontFamily.bodyRegular,
     fontSize: typography.fontSize.bodyLg,
     color: colors.onSurfaceVariant,
+    lineHeight: 24,
   },
 
-  // ─── Protection Status ─────────────────────────────
+  // ─── Protection Card ───────────────────────────────
   protectionCard: {
-    marginBottom: spacing.sectionGap,
-    padding: 0,
+    borderWidth: 1,
+    borderColor: colors.outline,
+    marginBottom: spacing['2xl'],
     overflow: 'hidden',
   },
   protectionGradient: {
-    padding: spacing.cardPadding,
-    borderRadius: borderRadius['2xl'],
+    padding: spacing.lg,
+  },
+  loadingContent: {
+    alignItems: 'center',
+    paddingVertical: spacing.lg,
+  },
+  loadingText: {
+    marginTop: spacing.md,
+    fontFamily: typography.fontFamily.bodyRegular,
+    fontSize: typography.fontSize.bodyMd,
+    color: colors.onSurfaceVariant,
   },
   protectionIconRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 16,
+    marginBottom: spacing.lg,
   },
   protectionIconBg: {
-    width: 44,
-    height: 44,
+    width: 48,
+    height: 48,
     borderRadius: borderRadius.lg,
-    backgroundColor: colors.errorContainer,
+    backgroundColor: colors.primaryFixed,
     alignItems: 'center',
     justifyContent: 'center',
   },
   protectionTitle: {
     fontFamily: typography.fontFamily.headlineBold,
-    fontSize: typography.fontSize.titleLg,
+    fontSize: typography.fontSize.headlineSm,
     fontWeight: '700',
-    color: colors.error,
-    marginBottom: 6,
+    color: colors.onSurface,
+    marginBottom: 4,
   },
   protectionDesc: {
     fontFamily: typography.fontFamily.bodyRegular,
     fontSize: typography.fontSize.bodyMd,
     color: colors.onSurfaceVariant,
+    lineHeight: 20,
+    marginBottom: spacing.lg,
   },
 
-  // ─── Plan Bento Grid ───────────────────────────────
+  // ─── Time Remaining Display ────────────────────────
+  timeRemainingBox: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.05)',
+    borderRadius: borderRadius.lg,
+    paddingVertical: spacing.lg,
+    marginBottom: spacing.lg,
+  },
+  timeItem: {
+    alignItems: 'center',
+    minWidth: 50,
+  },
+  timeValue: {
+    fontFamily: typography.fontFamily.headlineBold,
+    fontSize: typography.fontSize.headlineMd,
+    fontWeight: '800',
+    color: colors.primaryContainer,
+  },
+  timeLabel: {
+    fontFamily: typography.fontFamily.bodyRegular,
+    fontSize: typography.fontSize.bodySm,
+    color: colors.onSurfaceVariant,
+    marginTop: 2,
+  },
+  timeSeparator: {
+    marginHorizontal: spacing.sm,
+  },
+  timeDots: {
+    fontFamily: typography.fontFamily.headlineBold,
+    fontSize: typography.fontSize.headlineMd,
+    fontWeight: '800',
+    color: colors.primaryContainer,
+  },
+
+  // ─── Plan Section ──────────────────────────────────
   planSection: {
-    marginBottom: spacing.sectionGap,
+    marginBottom: spacing['2xl'],
   },
   planHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 16,
+    marginBottom: spacing.lg,
   },
   planTitle: {
-    fontFamily: typography.fontFamily.headlineSemiBold,
-    fontSize: typography.fontSize.titleLg,
+    fontFamily: typography.fontFamily.headlineBold,
+    fontSize: typography.fontSize.headlineSm,
+    fontWeight: '700',
     color: colors.onSurface,
   },
   planBadge: {
-    backgroundColor: colors.primaryFixed,
-    paddingHorizontal: 12,
-    paddingVertical: 4,
+    backgroundColor: colors.errorContainer,
     borderRadius: borderRadius.full,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: 4,
   },
   planBadgeText: {
-    fontFamily: typography.fontFamily.bodyBold,
-    fontSize: typography.fontSize.bodySm,
-    fontWeight: '700',
-    color: colors.primary,
+    fontFamily: typography.fontFamily.labelSemiBold,
+    fontSize: typography.fontSize.labelMd,
+    fontWeight: '600',
+    color: colors.error,
   },
   planGrid: {
     flexDirection: 'row',
-    gap: 16,
+    gap: spacing.lg,
   },
   bentoCard: {
     flex: 1,
-    padding: 16,
-    flexDirection: 'column',
-    gap: 8,
-  },
-  coverageCard: {
-    borderLeftWidth: 4,
-    borderLeftColor: colors.secondary,
+    padding: spacing.lg,
+    borderRadius: borderRadius['2xl'],
   },
   bentoLabel: {
-    fontFamily: typography.fontFamily.labelMedium,
+    fontFamily: typography.fontFamily.labelSemiBold,
     fontSize: typography.fontSize.labelSm,
+    fontWeight: '600',
     color: colors.onSurfaceVariant,
-    letterSpacing: 1,
+    marginBottom: 8,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
   bentoPriceRow: {
     flexDirection: 'row',
     alignItems: 'baseline',
-    gap: 2,
+    marginBottom: 8,
   },
   bentoPrice: {
     fontFamily: typography.fontFamily.headlineBold,
-    fontSize: typography.fontSize.displaySm,
+    fontSize: typography.fontSize.headlineLg,
     fontWeight: '800',
-    color: colors.primary,
+    color: colors.onSurface,
   },
   bentoPeriod: {
     fontFamily: typography.fontFamily.bodyRegular,
-    fontSize: typography.fontSize.bodyMd,
+    fontSize: typography.fontSize.bodySm,
     color: colors.onSurfaceVariant,
+    marginLeft: 4,
+  },
+  bentoAmountLarge: {
+    fontFamily: typography.fontFamily.headlineBold,
+    fontSize: typography.fontSize.headlineLg,
+    fontWeight: '800',
+    color: colors.primary,
+    marginBottom: 6,
+  },
+  bentoDesc: {
+    fontFamily: typography.fontFamily.bodyRegular,
+    fontSize: typography.fontSize.bodySm,
+    color: colors.onSurfaceVariant,
+    lineHeight: 18,
   },
   bentoNoteBox: {
     backgroundColor: colors.surfaceContainerLow,
-    padding: 8,
     borderRadius: borderRadius.md,
-    marginTop: 4,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
   },
   bentoNoteText: {
     fontFamily: typography.fontFamily.bodyRegular,
-    fontSize: 10,
+    fontSize: typography.fontSize.bodySm,
     color: colors.onSurfaceVariant,
-    lineHeight: 14,
   },
-  coverageAmount: {
-    fontFamily: typography.fontFamily.headlineBold,
-    fontSize: typography.fontSize.headlineSm,
-    color: colors.onSurface,
-    lineHeight: 28,
-  },
-  coverageDesc: {
-    fontFamily: typography.fontFamily.bodyMedium,
-    fontSize: 10,
-    color: colors.onSurfaceVariant,
-    lineHeight: 12,
-    marginTop: -4,
+  coverageCard: {
+    justifyContent: 'space-between',
   },
 
-  // ─── Smart Activation ──────────────────────────────
+  // ─── Smart Card ────────────────────────────────────
   smartCard: {
-    marginBottom: spacing.sectionGap,
+    marginBottom: spacing.lg,
   },
   smartIconRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
-    marginBottom: 10,
+    marginBottom: spacing.md,
   },
   smartIconBg: {
     width: 40,
@@ -382,25 +551,26 @@ const styles = StyleSheet.create({
     lineHeight: 22,
   },
 
-  // ─── Testimonial ───────────────────────────────────
+  // ─── Testimonial Card ──────────────────────────────
   testimonialCard: {
-    marginBottom: spacing.sectionGap,
+    padding: spacing.lg,
+    marginBottom: spacing.lg,
+  },
+  testimonialRow: {
+    gap: spacing.md,
   },
   testimonialText: {
-    fontFamily: typography.fontFamily.bodyMedium,
-    fontSize: typography.fontSize.bodyLg,
-    fontWeight: '500',
+    fontFamily: typography.fontFamily.bodyRegular,
+    fontSize: typography.fontSize.bodyMd,
     color: colors.onSurface,
     fontStyle: 'italic',
-    marginTop: 12,
-    marginBottom: 8,
-    lineHeight: 24,
+    lineHeight: 22,
   },
   testimonialAuthor: {
     fontFamily: typography.fontFamily.bodySemiBold,
     fontSize: typography.fontSize.bodyMd,
     fontWeight: '600',
-    color: colors.onSurfaceVariant,
+    color: colors.primary,
   },
 
   // ─── Bottom Navigation ─────────────────────────────
@@ -411,7 +581,11 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     paddingBottom: 20,
     backgroundColor: colors.surfaceContainerLowest,
-    ...shadows.md,
+    shadowColor: '#191c1d',
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.08,
+    shadowRadius: 32,
+    elevation: 4,
   },
   navItem: {
     alignItems: 'center',

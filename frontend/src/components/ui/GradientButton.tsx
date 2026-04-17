@@ -70,7 +70,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     flexDirection: 'row',
-    ...shadows.primaryTinted,
+    shadowColor: '#00347f',
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.15,
+    shadowRadius: 32,
+    elevation: 6,
   },
   gradientLg: {
     paddingVertical: 20,

@@ -1,18 +1,16 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import api from '../services/api';
+import type { User } from '../types';
 
-interface User {
-  id: string;
-  firebaseUid: string;
-  phone?: string;
-  name?: string;
+interface ApiResponse<T> {
+  data: T;
 }
 
 interface AuthContextData {
   user: User | null;
   isLoading: boolean;
-  login: (firebaseToken: string) => Promise<void>;
+  login: (firebaseToken: string) => Promise<User>;
   logout: () => Promise<void>;
   setUser: React.Dispatch<React.SetStateAction<User | null>>;
 }
@@ -29,7 +27,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       try {
         const token = await AsyncStorage.getItem('userToken');
         if (token) {
-          const response = await api.get<{ data: User }>('/auth/me');
+          const response = await api.get<ApiResponse<User>>('/auth/me');
           if (response && response.data) {
             setUser(response.data);
           }
@@ -49,11 +47,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       await AsyncStorage.setItem('userToken', firebaseToken);
       
-      const response = await api.get<{ data: User }>('/auth/me');
+      const response = await api.get<ApiResponse<User>>('/auth/me');
       
       if (response && response.data) {
         setUser(response.data);
+        return response.data;
       }
+
+      throw new Error('Login succeeded but user profile is missing.');
     } catch (e) {
       console.error('Login error:', e);
       await AsyncStorage.removeItem('userToken');

@@ -12,8 +12,12 @@ import { PlanCard } from '../../components/ui/PlanCard';
 import { GradientButton } from '../../components/ui/GradientButton';
 import { SectionHeader } from '../../components/ui/SectionHeader';
 
-const PlanSelectionScreen = ({ navigation }: any) => {
+const PlanSelectionScreen = ({ navigation, route }: any) => {
   const [selectedPlan, setSelectedPlan] = useState<'daily' | 'weekly'>('weekly');
+
+  const handleActivate = () => {
+    navigation.navigate('Payment', { planType: selectedPlan });
+  };
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -99,7 +103,7 @@ const PlanSelectionScreen = ({ navigation }: any) => {
         {/* ─── Activate Button ─────────────────────────────── */}
         <GradientButton
           title={`Activate ${selectedPlan === 'daily' ? 'Daily' : 'Weekly'} Plan`}
-          onPress={() => navigation.navigate('Payment')}
+          onPress={handleActivate}
           style={{ marginBottom: spacing.lg }}
         />
 

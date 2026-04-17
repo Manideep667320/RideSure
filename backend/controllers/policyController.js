@@ -1,4 +1,4 @@
-const { createPolicy, getActivePolicy } = require('../services/policyService');
+const { createPolicy, getActivePolicy, getUserPolicies } = require('../services/policyService');
 
 const createPolicyController = async (req, res, next) => {
     try {
@@ -28,7 +28,17 @@ const getPolicyStatusController = async (req, res, next) => {
     }
 };
 
+const getUserPoliciesController = async (req, res, next) => {
+    try {
+        const policies = await getUserPolicies(req.user.id);
+        res.status(200).json({ success: true, data: policies });
+    } catch (error) {
+        next(error);
+    }
+};
+
 module.exports = {
     createPolicyController,
-    getPolicyStatusController
+    getPolicyStatusController,
+    getUserPoliciesController
 };
