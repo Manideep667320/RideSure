@@ -38,13 +38,17 @@ export const PlanCard = ({
   onSelect,
   style,
 }: PlanCardProps) => {
+  const badgeLabel = isSelected ? 'SELECTED' : isRecommended ? 'RECOMMENDED' : null;
+
   return (
     <TouchableOpacity
       onPress={onSelect}
       activeOpacity={0.9}
+      accessibilityRole="button"
+      accessibilityState={{ selected: isSelected }}
       style={[style]}
     >
-      {isRecommended ? (
+      {isRecommended && isSelected ? (
         <LinearGradient
           colors={[...gradients.primary.colors]}
           start={{ x: 0, y: 0 }}
@@ -52,9 +56,23 @@ export const PlanCard = ({
           style={styles.gradientBorder}
         >
           <View style={styles.innerCard}>
-            <View style={styles.recommendedBadge}>
-              <Text style={styles.recommendedText}>RECOMMENDED</Text>
-            </View>
+            {badgeLabel && (
+              <View
+                style={[
+                  styles.recommendedBadge,
+                  isSelected && styles.selectedBadge,
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.recommendedText,
+                    isSelected && styles.selectedBadgeText,
+                  ]}
+                >
+                  {badgeLabel}
+                </Text>
+              </View>
+            )}
             {renderContent()}
           </View>
         </LinearGradient>
@@ -65,6 +83,23 @@ export const PlanCard = ({
             isSelected && styles.selectedCard,
           ]}
         >
+          {badgeLabel && (
+            <View
+              style={[
+                styles.recommendedBadge,
+                isSelected && styles.selectedBadge,
+              ]}
+            >
+              <Text
+                style={[
+                  styles.recommendedText,
+                  isSelected && styles.selectedBadgeText,
+                ]}
+              >
+                {badgeLabel}
+              </Text>
+            </View>
+          )}
           {renderContent()}
         </View>
       )}
@@ -112,6 +147,10 @@ const styles = StyleSheet.create({
   selectedCard: {
     borderWidth: 2,
     borderColor: colors.primaryContainer,
+    backgroundColor: colors.surfaceContainerLowest,
+    shadowOpacity: 0.1,
+    shadowRadius: 18,
+    elevation: 4,
   },
   gradientBorder: {
     borderRadius: borderRadius['2xl'],
@@ -130,12 +169,18 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-start',
     marginBottom: 12,
   },
+  selectedBadge: {
+    backgroundColor: colors.primaryContainer,
+  },
   recommendedText: {
     color: colors.onPrimary,
     fontFamily: typography.fontFamily.bodySemiBold,
     fontSize: typography.fontSize.labelSm,
     fontWeight: '700',
     letterSpacing: 1,
+  },
+  selectedBadgeText: {
+    color: colors.onPrimary,
   },
   planName: {
     fontFamily: typography.fontFamily.headlineBold,

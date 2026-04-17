@@ -1,6 +1,9 @@
 import React, { useEffect, useState } from 'react';
+import { ActivityIndicator, View, StyleSheet } from 'react-native';
 import { createStackNavigator } from '@react-navigation/stack';
 import { ROUTES } from '../constants/routes';
+import { colors } from '../theme/colors';
+import { useAuth } from '../context/AuthContext';
 
 // Auth Screens
 import SplashScreen from '../screens/auth/SplashScreen';
@@ -59,97 +62,117 @@ const TermsPolicyScreen = createDeferredScreen(() => import('../screens/settings
 const Stack = createStackNavigator();
 
 export const AppNavigator = () => {
+  const { user, isLoading } = useAuth();
+
+  if (isLoading) {
+    return (
+      <View style={styles.loadingScreen}>
+        <ActivityIndicator size="large" color={colors.primary} />
+      </View>
+    );
+  }
+
   return (
     <Stack.Navigator
-        initialRouteName={ROUTES.AUTH.SPLASH}
-        screenOptions={{
-          headerShown: false,
-          cardStyle: { backgroundColor: '#f8f9fa' },
-          gestureEnabled: true,
-        }}
-      >
-        {/* ─── Auth Screens ─────────────────────────────── */}
-        <Stack.Screen
-          name={ROUTES.AUTH.SPLASH}
-          component={SplashScreen}
-        />
-        <Stack.Screen
-          name={ROUTES.AUTH.LOGIN}
-          component={LoginScreen}
-        />
-        <Stack.Screen
-          name={ROUTES.AUTH.SIGNUP}
-          component={SignupScreen}
-        />
-        <Stack.Screen
-          name="SignUpDetails"
-          component={SignUpDetailsScreen}
-        />
+      key={user ? 'authenticated' : 'guest'}
+      initialRouteName={user ? ROUTES.MAIN.HOME : ROUTES.AUTH.SPLASH}
+      screenOptions={{
+        headerShown: false,
+        cardStyle: { backgroundColor: '#f8f9fa' },
+        gestureEnabled: true,
+      }}
+    >
+      {/* ─── Auth Screens ─────────────────────────────── */}
+      <Stack.Screen
+        name={ROUTES.AUTH.SPLASH}
+        component={SplashScreen}
+      />
+      <Stack.Screen
+        name={ROUTES.AUTH.LOGIN}
+        component={LoginScreen}
+      />
+      <Stack.Screen
+        name={ROUTES.AUTH.SIGNUP}
+        component={SignupScreen}
+      />
+      <Stack.Screen
+        name="SignUpDetails"
+        component={SignUpDetailsScreen}
+      />
 
-        {/* ─── Main Screens ─────────────────────────────── */}
-        <Stack.Screen
-          name={ROUTES.MAIN.HOME}
-          component={HomeScreen}
-        />
-        <Stack.Screen
-          name={ROUTES.MAIN.PLAN_SELECTION}
-          component={PlanSelectionScreen}
-        />
-        <Stack.Screen
-          name={ROUTES.MAIN.PAYMENT}
-          component={PaymentScreen}
-        />
-        <Stack.Screen
-          name="ActivationSuccess"
-          component={ActivationSuccessScreen}
-          options={{ gestureEnabled: false }}
-        />
-        <Stack.Screen
-          name={ROUTES.MAIN.ACTIVE_PROTECTION}
-          component={ActiveProtectionScreen}
-        />
-        <Stack.Screen
-          name={ROUTES.MAIN.CLAIM_FORM}
-          component={ClaimFormScreen}
-        />
-        <Stack.Screen
-          name={ROUTES.MAIN.CLAIM_PROCESSING}
-          component={ClaimProcessingScreen}
-          options={{ gestureEnabled: false }}
-        />
-        <Stack.Screen
-          name={ROUTES.MAIN.CLAIM_SUCCESS}
-          component={ClaimSuccessScreen}
-          options={{ gestureEnabled: false }}
-        />
-        <Stack.Screen
-          name={ROUTES.MAIN.HISTORY}
-          component={HistoryScreen}
-        />
-        <Stack.Screen
-          name={ROUTES.MAIN.PROFILE}
-          component={ProfileScreen}
-        />
-        <Stack.Screen
-          name={ROUTES.MAIN.PERSONAL_INFO}
-          component={PersonalInfoScreen}
-        />
-        <Stack.Screen
-          name={ROUTES.MAIN.PAYMENT_METHODS}
-          component={PaymentMethodsScreen}
-        />
-        <Stack.Screen
-          name={ROUTES.MAIN.INSURANCE_DOCUMENTS}
-          component={InsuranceDocumentsScreen}
-        />
-        <Stack.Screen
-          name={ROUTES.MAIN.HELP_CENTER}
-          component={HelpCenterScreen}
-        />
-        <Stack.Screen
-          name={ROUTES.MAIN.TERMS_POLICY}
-          component={TermsPolicyScreen}
-        />
+      {/* ─── Main Screens ─────────────────────────────── */}
+      <Stack.Screen
+        name={ROUTES.MAIN.HOME}
+        component={HomeScreen}
+      />
+      <Stack.Screen
+        name={ROUTES.MAIN.PLAN_SELECTION}
+        component={PlanSelectionScreen}
+      />
+      <Stack.Screen
+        name={ROUTES.MAIN.PAYMENT}
+        component={PaymentScreen}
+      />
+      <Stack.Screen
+        name="ActivationSuccess"
+        component={ActivationSuccessScreen}
+        options={{ gestureEnabled: false }}
+      />
+      <Stack.Screen
+        name={ROUTES.MAIN.ACTIVE_PROTECTION}
+        component={ActiveProtectionScreen}
+      />
+      <Stack.Screen
+        name={ROUTES.MAIN.CLAIM_FORM}
+        component={ClaimFormScreen}
+      />
+      <Stack.Screen
+        name={ROUTES.MAIN.CLAIM_PROCESSING}
+        component={ClaimProcessingScreen}
+        options={{ gestureEnabled: false }}
+      />
+      <Stack.Screen
+        name={ROUTES.MAIN.CLAIM_SUCCESS}
+        component={ClaimSuccessScreen}
+        options={{ gestureEnabled: false }}
+      />
+      <Stack.Screen
+        name={ROUTES.MAIN.HISTORY}
+        component={HistoryScreen}
+      />
+      <Stack.Screen
+        name={ROUTES.MAIN.PROFILE}
+        component={ProfileScreen}
+      />
+      <Stack.Screen
+        name={ROUTES.MAIN.PERSONAL_INFO}
+        component={PersonalInfoScreen}
+      />
+      <Stack.Screen
+        name={ROUTES.MAIN.PAYMENT_METHODS}
+        component={PaymentMethodsScreen}
+      />
+      <Stack.Screen
+        name={ROUTES.MAIN.INSURANCE_DOCUMENTS}
+        component={InsuranceDocumentsScreen}
+      />
+      <Stack.Screen
+        name={ROUTES.MAIN.HELP_CENTER}
+        component={HelpCenterScreen}
+      />
+      <Stack.Screen
+        name={ROUTES.MAIN.TERMS_POLICY}
+        component={TermsPolicyScreen}
+      />
     </Stack.Navigator>
   );
 };
+
+const styles = StyleSheet.create({
+  loadingScreen: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.surface,
+  },
+});
