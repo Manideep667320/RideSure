@@ -32,6 +32,11 @@
       "@react-native-firebase/app",
       "@react-native-firebase/auth",
       "expo-dev-client"
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "3088282f-751e-46e1-b8eb-786b212d0df5"
+      }
+    }
   }
 }
