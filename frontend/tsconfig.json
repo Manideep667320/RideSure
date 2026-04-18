@@ -1,6 +1,7 @@
 {
   "compilerOptions": {
     "ignoreDeprecations": "6.0",
+    "rootDir": ".",
     "strict": true,
     "jsx": "react-native",
     "lib": [
@@ -26,6 +27,5 @@
   ],
   "exclude": [
     "node_modules"
-  ],
-  "extends": "expo/tsconfig.base.json"
+  ]
 }
