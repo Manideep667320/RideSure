@@ -20,9 +20,9 @@ const getWebClientId = () => {
 // Initialize Google Sign-In
 export const configureGoogleSignIn = async () => {
   try {
-    await GoogleSignin.hasPlayServices();
     GoogleSignin.configure({
       webClientId: getWebClientId(),
+      offlineAccess: true,
       profileImageSize: 120,
     });
   } catch (error: any) {
@@ -33,16 +33,27 @@ export const configureGoogleSignIn = async () => {
 // Sign in with Google
 export const signInWithGoogle = async () => {
   try {
-    await GoogleSignin.hasPlayServices();
+    await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
     const userInfo = await GoogleSignin.signIn();
-    
-    if (!userInfo.data?.idToken) {
+
+    if (userInfo.type !== 'success') {
+      throw new Error('Sign-in was cancelled');
+    }
+
+    let idToken = userInfo.data.idToken;
+
+    if (!idToken) {
+      const tokens = await GoogleSignin.getTokens();
+      idToken = tokens.idToken;
+    }
+
+    if (!idToken) {
       throw new Error('No ID token received from Google Sign-In');
     }
 
     // Create Firebase credential with the Google ID token
     const googleCredential = auth.GoogleAuthProvider.credential(
-      userInfo.data.idToken
+      idToken
     );
 
     // Sign in with Firebase using the Google credential
