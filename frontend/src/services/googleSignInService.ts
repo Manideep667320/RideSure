@@ -2,31 +2,19 @@ import {
   GoogleSignin,
   statusCodes,
 } from '@react-native-google-signin/google-signin';
+import Constants from 'expo-constants';
 import auth from '@react-native-firebase/auth';
-import googleServices from '../../google-services.json';
-
-type GoogleServicesConfig = {
-  client?: Array<{
-    oauth_client?: Array<{
-      client_id: string;
-      client_type: number;
-    }>;
-  }>;
-};
 
 const getWebClientId = () => {
-  const config = googleServices as GoogleServicesConfig;
-  const webClientId = config.client
-    ?.flatMap((client) => client.oauth_client ?? [])
-    .find((oauthClient) => oauthClient.client_type === 3)?.client_id;
+  const extraWebClientId = Constants.expoConfig?.extra?.googleWebClientId;
 
-  if (!webClientId) {
-    throw new Error(
-      'Missing Google web client ID in google-services.json. Re-download it from Firebase.'
-    );
+  if (typeof extraWebClientId === 'string' && extraWebClientId.length > 0) {
+    return extraWebClientId;
   }
 
-  return webClientId;
+  throw new Error(
+    'Missing Google web client ID in app config. Rebuild after updating google-services.json.'
+  );
 };
 
 // Initialize Google Sign-In
